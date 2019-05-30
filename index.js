@@ -24,6 +24,7 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
   onmessage: e => {
     const data = JSON.parse(e.data)
     CACHE = data
+    if (!data.hasOwnProperty('to')) { return }
     return startTrader(data)
   },
   onreconnect: e => console.log('Reconnecting...'),
@@ -32,13 +33,20 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
   onerror: e => console.log('Error:')
 })
 
+let bot = null
+
 const startTrader = (data) => {
+    if(bot && bot.isTrading) {
+        console.log(`Bot is trading on ${bot.asset}`)
+        return
+    }
     const regex = RegExp(/(BTC)$/g)
-    const bot = new Trader({
+    bot = new Trader({
         test: false,
         client,
         base: config.currency,
-        websocket
+        websocket,
+        maxBalance: 0.0011
     })
     if (data.hasOwnProperty('to') && data.to == 'trader') {
         // console.log(data)
@@ -61,11 +69,11 @@ const startTrader = (data) => {
         console.log(pair)
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
-        if (pair[0].pair && diff < 45) {
+        if (pair[0].pair && diff < 15) {
             bot.startTrading({ pair: pair[0].pair, time: 30000 }).catch(console.error)
         } else {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
         }
     }
-    return
+    return bot
 }

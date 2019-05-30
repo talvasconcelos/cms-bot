@@ -11,7 +11,6 @@ class Bot extends Trader {
         this.stopLoss = null
         this.persistence = 0
         this.initialPrices = true
-        this.websocketPrice()
         this.forcePriceUpdate(3600000)
     }
 
@@ -21,7 +20,8 @@ class Bot extends Trader {
 
         this.outputTradeInfo()
 
-        return this.checkPrices()
+        this.checkPrices()
+        return 
     }
 
     initPrices() {
@@ -46,6 +46,7 @@ class Bot extends Trader {
         }
         if(this.lastPrice <= this.stopLoss) {
             console.log('Stop Loss trigered. Selling!')
+            
             return this.sell()
         }
         if(this.lastPrice <= this.sellPrice) {
@@ -55,6 +56,7 @@ class Bot extends Trader {
             }
             console.log('Trailing Stop Loss trigered. Selling!')
             this.persistence = 0
+            
             return this.sell()
         }
         this.persistence > 0 ? this.persistence = 0 : null
@@ -62,11 +64,11 @@ class Bot extends Trader {
     }
 
     outputTradeInfo() {
-        console.log(`\nPair: ${this._asset} ${new Date().toTimeString()}\nLast Price: ${this.lastPrice}\nBuy Price: ${this.buyPrice}\nSell Price: ${this.sellPrice.toFixed(8)}\nStop Loss: ${this.stopLoss.toFixed(8)}\nTarget Price: ${this.targetPrice.toFixed(8)}\n`)
+        return console.log(`\nPair: ${this.asset} ${new Date().toTimeString()}\nLast Price: ${this.lastPrice}\nBuy Price: ${this.buyPrice}\nSell Price: ${this.sellPrice.toFixed(8)}\nStop Loss: ${this.stopLoss.toFixed(8)}\nTarget Price: ${this.targetPrice.toFixed(8)}\n`)
     }
 
     forcePriceUpdate(interval) {
-        setInterval(this.websocketPrice(), interval)
+        return setInterval(() => this.websocketPrice(), interval)
     }
 
 }

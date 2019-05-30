@@ -1,5 +1,6 @@
 const EventEmitter = require('events')
 const continuous = require('continuous')
+const db = require('./logger')
 
 class Trader extends EventEmitter{
     constructor(opts){
@@ -7,10 +8,12 @@ class Trader extends EventEmitter{
         this.test = opts.test
         this.client = opts.client
         this.websocket = opts.websocket
+        this.maxBalance = opts.maxBalance || null
         this.base = opts.base || 'BTC'
         this.product = null
         this.buyPrice = null
         this.sellPrice = null
+        this.log = db
     }
 
     async initTrader() {
@@ -24,21 +27,31 @@ class Trader extends EventEmitter{
         this.retry = 0
         await this.syncBalances()
         await this.midmarket_price()
+        this.log.get('balance')
+                .push(this.balances.base)
+                .write()
     }
 
     async startTrading(opts) {
         opts = opts || {}
         this.product = opts.pair
-        opts.callback = this.executeStrategy//.bind(this)
+        opts.callback = this.executeStrategy.bind(this)
         if(this.isTrading) { return false }
 
         const timer = new continuous(opts)
         timer.on('stopped', () => {
             this.isTrading = false
+            console.log('Trader end.')
+            this.log.get('balance')
+                .push(this.balances.base)
+                .write()
             return resolve()
         })
         timer.on('started', () => {
             this.isTrading = true
+            this.websocketPrice()
+            console.log('Start strategy')
+            return true
         })
         this.timer = timer
         await this.initTrader()        
@@ -72,9 +85,9 @@ class Trader extends EventEmitter{
             console.log(`Insuficient funds!`)
             return false
         }
-
+        const balance = this.maxBalance ? this.maxBalance : this.balances.base
         const price = this.roundToNearest(this.bestPrice, this.tickSize)
-        const qty = this.roundToNearest((this.balances.base / price), this.minQty)
+        const qty = this.roundToNearest((balance / price), this.minQty)
         
         if (price * qty < this._minOrder) {
             console.error('Minimum order must be', this._minOrder + '.')
@@ -95,9 +108,11 @@ class Trader extends EventEmitter{
     }
 
     sell() {
+        let price = Utils.roundToNearest(this.lastPrice, this.tickSize)
         let qty = this.roundToNearest(this.balances.asset, this.minQty)
         return this.addOrder({
             side: 'SELL',
+            price: price.toFixed(8),
             quantity: qty,
             type: 'MARKET'
         })
@@ -123,10 +138,24 @@ class Trader extends EventEmitter{
         const executeOrder = this.test ? this.client.testOrder(order) : this.client.newOrder(order)
         return executeOrder
             .then(result => {
+                if(result && result.code < 0) {
+                    console.log(`Order as an error:`, result)
+                    this.log.get('errors')
+                        .push({timestamp: Date.now(), error: result})
+                        .write()
+                    return false
+                }
                 if(result && result.status === 'FILLED'){ 
                     this.retry = 0
+                    this.buyPrice = result.price
+                    this.syncBalances()
+                    console.log('order filled')
                     return true 
                 }
+                this.order = result
+                this.log.get('orders')
+                    .push({timestamp: Date.now(), order: this.order})
+                    .write()
                 result.side === 'BUY' ? this.isBuying = true : this.isSelling = true
                 return setTimeout(() => {
                     return this.checkOrder(this.order)
@@ -134,6 +163,9 @@ class Trader extends EventEmitter{
             })
             .catch(err => {
                 console.error(err)
+                this.log.get('errors')
+                    .push({timestamp: Date.now(), error: err})
+                    .write()
                 return false
             })
     }
@@ -155,11 +187,11 @@ class Trader extends EventEmitter{
 
             let msg = `${data.side}: ${this.product}
             Status: ${data.status}
-            OrderID: ${self._order_id}
+            OrderID: ${data.orderId}
             Price: ${data.price}
             Qty: ${data.executedQty}/${data.origQty}
-            buying: ${self._is_buying}
-            selling: ${self._is_selling}`
+            buying: ${this.isBuying}
+            selling: ${this.isSelling}`
             console.log(msg)
 
             if(canceledManually) { return false }
@@ -167,6 +199,21 @@ class Trader extends EventEmitter{
             if(filled) { 
                 data.side === 'BUY' ? this.isBuying = false : this.isSelling = false
                 this.retry = 0
+                this.buyPrice = data.price
+                this.syncBalances()
+                if(data.side === 'SELL') {
+                    this.log
+                        .get('balance')
+                        .push(this.balances.base)
+                        .get('orders')
+                        .push({timestamp: Date.now(), order: this.order})
+                        .write()
+                } else {
+                    this.log
+                        .get('orders')
+                        .push({timestamp: Date.now(), order: this.order})
+                        .write()
+                }
                 return data.side === 'BUY' ? true : this.stopTrading()
             }
 
@@ -183,6 +230,9 @@ class Trader extends EventEmitter{
         })
         .catch(err => {
             console.error(err)
+            this.log.get('errors')
+                .push({timestamp: Date.now(), error: err})
+                .write()
             return false
         })
     }
@@ -194,6 +244,10 @@ class Trader extends EventEmitter{
         }).then(data => {
             data.side === 'BUY' ? this.isBuying = false : this.isSelling = false
             console.log(`Order canceled!`)
+            this.log
+                .get('orders')
+                .push({timestamp: Date.now(), order: data})
+                .write()
         }).catch(console.error)
     }
 
@@ -239,7 +293,7 @@ class Trader extends EventEmitter{
 
     websocketPrice() {
         const feed = this.websocket
-        if(!feed) { return }
+        if(!feed || !this.product) { return }
         feed.onAggTrade(this.product, msg => {
             this.lastPrice = msg.price
         })

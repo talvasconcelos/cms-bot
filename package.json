@@ -13,6 +13,7 @@
   "dependencies": {
     "binance": "^1.3.3",
     "continuous": "^0.1.2",
+    "lowdb": "^1.0.0",
     "sockette": "^2.0.5",
     "ws": "^7.0.0"
   }
