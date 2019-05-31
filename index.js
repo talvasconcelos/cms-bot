@@ -35,7 +35,7 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
 
 let bot = null
 
-const startTrader = (data) => {
+const startTrader = async (data) => {
     if(bot && bot.isTrading) {
         console.log(`Bot is trading on ${bot.asset}`)
         return
@@ -48,7 +48,11 @@ const startTrader = (data) => {
         websocket,
         maxBalance: 0.0011
     })
-    if (data.hasOwnProperty('to') && data.to == 'trader') {
+    await bot.isLastTradeOpen()
+    if(bot.isResuming) {
+        bot.startTrading({ pair: bot.product, time: 30000 }).catch(console.error)
+    }
+    if (!bot.isResuming && data.hasOwnProperty('to') && data.to == 'trader') {
         // console.log(data)
         if (bot && bot.is_trading) {
             console.log(`Bot is trading!`)
@@ -69,7 +73,7 @@ const startTrader = (data) => {
         console.log(pair)
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
-        if (pair[0].pair && diff < 15) {
+        if (pair[0].pair && diff < 30) {
             bot.startTrading({ pair: pair[0].pair, time: 30000 }).catch(console.error)
         } else {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
@@ -77,3 +81,12 @@ const startTrader = (data) => {
     }
     return bot
 }
+
+process.on('SIGINT', async () => {
+    console.log('Stopping Trader Bot')
+    if(bot) {
+        await bot.stopTrading({cancel: true})
+    }
+    await cmsWS.close()
+    process.exit(0)
+})

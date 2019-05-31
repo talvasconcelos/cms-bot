@@ -8,7 +8,6 @@ const db = low(adapter)
 db.defaults({
     balance: [],
     trades: [],
-    orders: [],
     errors: []
 }).write()
 

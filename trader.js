@@ -13,6 +13,7 @@ class Trader extends EventEmitter{
         this.product = null
         this.buyPrice = null
         this.sellPrice = null
+        this.isResuming = false
         this.log = db
     }
 
@@ -32,6 +33,21 @@ class Trader extends EventEmitter{
                 .write()
     }
 
+    isLastTradeOpen() {
+        const last = this.log.get('trades').last().value()
+        if(!last) {return false}
+        if(last.state === 'closed') {
+            console.log('Last trade closed!')
+            return false
+        } else {
+            console.log('Last trade open!')
+            this.product = last.pair
+            this.buyPrice = +last.buyPrice
+            this.isResuming = true
+            return last
+        }
+    }
+
     async startTrading(opts) {
         opts = opts || {}
         this.product = opts.pair
@@ -45,7 +61,7 @@ class Trader extends EventEmitter{
             this.log.get('balance')
                 .push(this.balances.base)
                 .write()
-            return resolve()
+            return
         })
         timer.on('started', () => {
             this.isTrading = true
@@ -53,10 +69,13 @@ class Trader extends EventEmitter{
             console.log('Start strategy')
             return true
         })
-        this.timer = timer
-        await this.initTrader()        
-        const buy = await this.buy()
-        if(!buy) { return this.stopTrading() }
+        this.timer = timer        
+        await this.initTrader()
+        if(!this.isResuming){
+            console.log('Not resuming last trade!')
+            const buy = await this.buy()
+            if(!buy) { return this.stopTrading() }
+        }
         timer.start()
         return true
     }
@@ -107,8 +126,8 @@ class Trader extends EventEmitter{
         return this.addOrder(order)
     }
 
-    sell() {
-        let price = Utils.roundToNearest(this.lastPrice, this.tickSize)
+    async sell() {
+        let price = this.roundToNearest(this.lastPrice, this.tickSize)
         let qty = this.roundToNearest(this.balances.asset, this.minQty)
         return this.addOrder({
             side: 'SELL',
@@ -137,7 +156,7 @@ class Trader extends EventEmitter{
         }
         const executeOrder = this.test ? this.client.testOrder(order) : this.client.newOrder(order)
         return executeOrder
-            .then(result => {
+            .then(async result => {
                 if(result && result.code < 0) {
                     console.log(`Order as an error:`, result)
                     this.log.get('errors')
@@ -148,14 +167,25 @@ class Trader extends EventEmitter{
                 if(result && result.status === 'FILLED'){ 
                     this.retry = 0
                     this.buyPrice = result.price
-                    this.syncBalances()
+                    await this.syncBalances()
                     console.log('order filled')
+                    this.log.get('trades')
+                        .push({
+                            timestamp: Date.now(),
+                            pair: this.product,
+                            buyPrice: this.buyPrice,
+                            state: result.side === 'BUY' ? 'opened' : 'closed'
+                        })
+                        .write()
+                    if(result.side === 'SELL'){
+                        return this.stopTrading()
+                    }
                     return true 
                 }
                 this.order = result
-                this.log.get('orders')
-                    .push({timestamp: Date.now(), order: this.order})
-                    .write()
+                // this.log.get('orders')
+                //     .push({timestamp: Date.now(), order: this.order})
+                //     .write()
                 result.side === 'BUY' ? this.isBuying = true : this.isSelling = true
                 return setTimeout(() => {
                     return this.checkOrder(this.order)
@@ -205,13 +235,27 @@ class Trader extends EventEmitter{
                     this.log
                         .get('balance')
                         .push(this.balances.base)
-                        .get('orders')
-                        .push({timestamp: Date.now(), order: this.order})
+                        // .get('orders')
+                        // .push({timestamp: Date.now(), order: this.order})
+                        .get('trades')
+                        .push({
+                            timestamp: Date.now(),
+                            pair: this.product,
+                            buyPrice: data.price,
+                            state: 'closed'                            
+                        })
                         .write()
                 } else {
                     this.log
-                        .get('orders')
-                        .push({timestamp: Date.now(), order: this.order})
+                        // .get('orders')
+                        // .push({timestamp: Date.now(), order: this.order})
+                        .get('trades')
+                        .push({
+                            timestamp: Date.now(),
+                            pair: this.product,
+                            buyPrice: data.price,
+                            state: 'opened'                       
+                        })
                         .write()
                 }
                 return data.side === 'BUY' ? true : this.stopTrading()
@@ -244,10 +288,10 @@ class Trader extends EventEmitter{
         }).then(data => {
             data.side === 'BUY' ? this.isBuying = false : this.isSelling = false
             console.log(`Order canceled!`)
-            this.log
-                .get('orders')
-                .push({timestamp: Date.now(), order: data})
-                .write()
+            // this.log
+            //     .get('orders')
+            //     .push({timestamp: Date.now(), order: data})
+            //     .write()
         }).catch(console.error)
     }
 
