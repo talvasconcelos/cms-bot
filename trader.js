@@ -171,9 +171,9 @@ class Trader extends EventEmitter{
                         .write()
                     return false
                 }
+                this.buyPrice = result.price
                 if(result && result.status === 'FILLED'){
                     this.retry = 0
-                    this.buyPrice = result.price
                     await this.syncBalances()
                     console.log('order filled')
                     this.log.get('trades')

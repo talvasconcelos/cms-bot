@@ -136,15 +136,15 @@ const startTrader = async (data) => {
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
         if (pair[0].pair && diff < 15) {
-            pair.some(p => {
-                return bot.startTrading({pair: p.pair, time: 30000})
-            })
-            // bot.startTrading({ pair: pair[0].pair, time: 30000 })
-            // .then(res => {
-            //     if(!res && pair[1].pair){
-            //         bot.startTrading({ pair: pair[1].pair, time: 30000 })
-            //     }
+            // pair.some(p => {
+            //     return bot.startTrading({pair: p.pair, time: 30000}).catch(console.error)
             // })
+            bot.startTrading({ pair: pair[0].pair, time: 30000 })
+            .then(res => {
+                if(!res && pair[1].pair){
+                    bot.startTrading({ pair: pair[1].pair, time: 30000 })
+                }
+            })
             .catch(console.error)
         } else {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
