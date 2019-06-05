@@ -57,6 +57,8 @@ class Trader extends EventEmitter{
         const timer = new continuous(opts)
         timer.on('stopped', () => {
             this.isTrading = false
+            this.telegramInfoStop()
+            this.emit('traderEnded')
             console.log('Trader end.')
             this.log.get('balance')
                 .push(this.balances.base)
@@ -65,7 +67,7 @@ class Trader extends EventEmitter{
         })
         timer.on('started', () => {
             this.isTrading = true
-            this.websocketPrice()
+            this.telegramInfoStart()
             console.log('Start strategy')
             return true
         })
@@ -73,9 +75,14 @@ class Trader extends EventEmitter{
         await this.initTrader()
         if(!this.isResuming){
             console.log('Not resuming last trade!')
+            this.emit('tradeStart')
             const buy = await this.buy()
-            if(!buy) { return this.stopTrading() }
+            if(!buy) { 
+                await this.stopTrading()
+                return false
+            }
         }
+        this.websocketPrice()
         timer.start()
         return true
     }
@@ -112,7 +119,7 @@ class Trader extends EventEmitter{
             console.error('Minimum order must be', this._minOrder + '.')
             return false
         }
-        if(price < 0.00000099){
+        if(price < 0.00000999){
             console.log('Price too low!')
             return false
         }
@@ -164,7 +171,7 @@ class Trader extends EventEmitter{
                         .write()
                     return false
                 }
-                if(result && result.status === 'FILLED'){ 
+                if(result && result.status === 'FILLED'){
                     this.retry = 0
                     this.buyPrice = result.price
                     await this.syncBalances()
@@ -178,9 +185,11 @@ class Trader extends EventEmitter{
                         })
                         .write()
                     if(result.side === 'SELL'){
+                        this.emit('traderSold', result.price)
                         return this.stopTrading()
                     }
-                    return true 
+                    this.emit('filledOrder', this.buyPrice)
+                    return true
                 }
                 this.order = result
                 // this.log.get('orders')
@@ -194,7 +203,7 @@ class Trader extends EventEmitter{
             .catch(err => {
                 console.error(err)
                 this.log.get('errors')
-                    .push({timestamp: Date.now(), error: err})
+                    .push({timestamp: Date.now(), pair: this.product, error: err})
                     .write()
                 return false
             })
@@ -220,8 +229,10 @@ class Trader extends EventEmitter{
             OrderID: ${data.orderId}
             Price: ${data.price}
             Qty: ${data.executedQty}/${data.origQty}
+            Status: ${data.status}
             buying: ${this.isBuying}
             selling: ${this.isSelling}`
+            this.emit('traderCheckOrder', msg)
             console.log(msg)
 
             if(canceledManually) { return false }
@@ -229,9 +240,8 @@ class Trader extends EventEmitter{
             if(filled) { 
                 data.side === 'BUY' ? this.isBuying = false : this.isSelling = false
                 this.retry = 0
-                this.buyPrice = data.price
-                this.syncBalances()
                 if(data.side === 'SELL') {
+                    this.emit('traderSold', data.price)
                     this.log
                         .get('balance')
                         .push(this.balances.base)
@@ -246,6 +256,9 @@ class Trader extends EventEmitter{
                         })
                         .write()
                 } else {
+                    this.buyPrice = data.price
+                    this.syncBalances()
+                    this.emit('filledOrder', this.buyPrice)
                     this.log
                         // .get('orders')
                         // .push({timestamp: Date.now(), order: this.order})
@@ -269,13 +282,13 @@ class Trader extends EventEmitter{
                 if(this.retry > 3){
                     return this.buy({market: true})
                 }
-                return setTimeout(this.checkOrder(this.order), 30000)
+                return setTimeout(() => this.checkOrder(this.order), 30000)
             }
         })
         .catch(err => {
             console.error(err)
             this.log.get('errors')
-                .push({timestamp: Date.now(), error: err})
+                .push({timestamp: Date.now(), pair: this.product, error: err})
                 .write()
             return false
         })
@@ -341,6 +354,19 @@ class Trader extends EventEmitter{
         feed.onAggTrade(this.product, msg => {
             this.lastPrice = msg.price
         })
+    }
+
+    telegramInfoStart(options) {
+        options = options || {}
+        let time = options.time || 1.8e+6
+        this.telegramInfo = setInterval(() => {
+            this.emit('tradeInfo')
+        }, time)
+    }
+
+    telegramInfoStop() {
+        clearInterval(this.telegramInfo)
+        this.emit('tradeInfoStop')
     }
 }
 

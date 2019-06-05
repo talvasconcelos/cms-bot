@@ -4,8 +4,8 @@ class Bot extends Trader {
     constructor(options) {
         super(options)
         this.TP = 1.3
-        this._TP_p = 1.02
-        this._SL_p = 1.03
+        this._TP_p = 1.025
+        this._SL_p = 1.035
         this._TRAIL_p = 1.005
         this.targetPrice = null
         this.stopLoss = null
@@ -16,6 +16,9 @@ class Bot extends Trader {
 
     executeStrategy() {
         if(!this.isTrading){ return }
+        if(!this.lastPrice || this.lastPrice === 'undefined'){
+            this.websocketPrice()
+        }
         if(this.initialPrices){ this.initPrices() }
 
         this.outputTradeInfo()
@@ -33,15 +36,19 @@ class Bot extends Trader {
 
     checkPrices() {
         if(this.isSelling) {return}
-        if(this.lastPrice > this.buyPrice * this.TP) {
+        if(this.lastPrice >= this.buyPrice * this.TP) {
             console.log('Top target achieved. Selling!')
             return this.sell()
         }
-        if(this.lastPrice > this.targetPrice) {
-            this.sellPrice = this.roundToNearest(this.targetPrice / this._TRAIL_p, this.tickSize)
-            this.targetPrice = this.roundToNearest(this.targetPrice * this._TP_p, this.tickSize)
+        if(this.lastPrice >= this.targetPrice) {
+            this.sellPrice = this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize)
+            if((this.sellPrice / this.buyPrice) < this._TP_p){
+                this.sellPrice = this.this.targetPrice
+            }
+            this.targetPrice = this.roundToNearest((this.targetPrice * this._TP_p), this.tickSize)
             console.log('Sell price updated:', this.sellPrice)
             console.log('Target price updated:', this.targetPrice)
+            this.emit('priceUpdate', this.targetPrice)
             return
         }
         if(this.lastPrice <= this.stopLoss) {
@@ -51,12 +58,13 @@ class Bot extends Trader {
         }
         if(this.lastPrice <= this.sellPrice) {
             if(this.persistence <= 2) {
+                this.persistence++
                 console.log(`Sell price triggered, persistence activated: ${this.persistence}`)
-                return this.persistence++
+                this.emit('traderPersistenceTrigger', this.persistence)
+                return 
             }
             console.log('Trailing Stop Loss trigered. Selling!')
-            this.persistence = 0
-            
+            this.persistence = 0            
             return this.sell()
         }
         this.persistence > 0 ? this.persistence = 0 : null

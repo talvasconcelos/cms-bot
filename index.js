@@ -1,8 +1,17 @@
 global.WebSocket = require('ws')
 const Sockette = require('sockette')
+const Slimbot = require('slimbot')
 const api = require('binance')
 const config = require('./config')
 const Trader = require(`./strategies/${config.strategy}`)
+
+const telegram = (apikey) => {
+    const slimbot = new Slimbot(apikey)
+    slimbot.startPolling()
+    return slimbot
+}
+
+const slimbot = config.telegram ? telegram(config.telegramAPI) : null
 
 const client = new api.BinanceRest({
     key: config.API_KEY, // Get this from your account on binance.com
@@ -16,6 +25,8 @@ const client = new api.BinanceRest({
 const websocket = new api.BinanceWS()
 
 let CACHE = null
+
+slimbot && slimbot.sendMessage(config.telegramUserID, `Trader started`, {parse_mode: 'Markdown'}).catch(console.error)
 
 const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
   timeout: 5e3,
@@ -34,6 +45,57 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
 })
 
 let bot = null
+
+const telegramReport = (e) => {
+    if (!config.telegram || !slimbot) { return }
+    const ID = config.telegramUserID
+
+    e.on('tradeStart', () => {
+        let msg = `Buying ${bot.asset}.`
+        slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
+    })
+
+    e.on('tradeInfo', () => {
+        let msg = `*${e.product}*
+        *Last Price:* ${e.lastPrice}
+        *Buy Price:* ${e.buyPrice}
+        *Sell Price:* ${e.sellPrice}
+        *Stop Loss:* ${e.stopLoss}
+        *Target Price:* ${e.targetPrice}`
+        slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
+    })
+
+    e.on('tradeInfoStop', () => {
+        let msg = `${e.asset} trade ended!`
+        slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
+        return startTrader(CACHE)
+    })
+
+    e.on('traderCheckOrder', (msg) => {
+        slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
+    })
+
+    e.on('traderPersistenceTrigger', (count) => {
+        let msg = `Sell price triggered, persistence activated: ${count}!`
+        slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
+    })
+
+    e.on('priceUpdate', (price) => {
+        let upPct = (1 - (price / e.buyPrice)) * 100
+        let msg = `Target price for ${e.asset} updated: ${price}. Up ${upPct}%`
+        slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
+    })
+
+    e.on('traderSold', (price) => {
+        let msg = `Sold ${e.asset} for ${price}!`
+        slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
+    })
+
+    e.on('filledOrder', (price) => {
+        let msg = `Bought ${e.asset} for ${price}!`
+        slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
+    })
+}
 
 const startTrader = async (data) => {
     if(bot && bot.isTrading) {
@@ -73,19 +135,31 @@ const startTrader = async (data) => {
         console.log(pair)
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
-        if (pair[0].pair && diff < 30) {
-            bot.startTrading({ pair: pair[0].pair, time: 30000 }).catch(console.error)
+        if (pair[0].pair && diff < 15) {
+            pair.some(p => {
+                return bot.startTrading({pair: p.pair, time: 30000})
+            })
+            // bot.startTrading({ pair: pair[0].pair, time: 30000 })
+            // .then(res => {
+            //     if(!res && pair[1].pair){
+            //         bot.startTrading({ pair: pair[1].pair, time: 30000 })
+            //     }
+            // })
+            .catch(console.error)
         } else {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
         }
     }
+    telegramReport(bot)
     return bot
 }
 
 process.on('SIGINT', async () => {
     console.log('Stopping Trader Bot')
+    if(slimbot){ slimbot.sendMessage(config.telegramUserID, `Trader ended`, {parse_mode: 'Markdown'}).catch(console.error)}
+    CACHE = null
     if(bot) {
-        await bot.stopTrading({cancel: true})
+        await bot.stopTrading({cancel: (bot.isBuying || bot.isSelling) ? true : false})
     }
     await cmsWS.close()
     process.exit(0)
