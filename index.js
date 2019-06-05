@@ -56,7 +56,9 @@ const telegramReport = (e) => {
     })
 
     e.on('tradeInfo', () => {
+        let pct = (1 - (price / e.buyPrice)) * 100
         let msg = `*${e.product}*
+        *${pct < 0 ? 'Down' : 'Up'}:* ${pct.toFixed(2)}
         *Last Price:* ${e.lastPrice}
         *Buy Price:* ${e.buyPrice}
         *Sell Price:* ${e.sellPrice}
@@ -108,7 +110,7 @@ const startTrader = async (data) => {
         client,
         base: config.currency,
         websocket,
-        maxBalance: 0.0011
+        //maxBalance: 0.0011
     })
     await bot.isLastTradeOpen()
     if(bot.isResuming) {
