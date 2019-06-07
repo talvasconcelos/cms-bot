@@ -43,7 +43,7 @@ class Bot extends Trader {
         if(this.lastPrice >= this.targetPrice) {
             this.sellPrice = this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize)
             if((this.sellPrice / this.buyPrice) < this._TP_p){
-                this.sellPrice = this.this.targetPrice
+                this.sellPrice = this.targetPrice - this.tickSize
             }
             this.targetPrice = this.roundToNearest((this.targetPrice * this._TP_p), this.tickSize)
             console.log('Sell price updated:', this.sellPrice)
@@ -56,7 +56,7 @@ class Bot extends Trader {
             
             return this.sell()
         }
-        if(this.lastPrice <= this.sellPrice) {
+        if(this.lastPrice < this.sellPrice) {
             if(this.persistence <= 2) {
                 this.persistence++
                 console.log(`Sell price triggered, persistence activated: ${this.persistence}`)
@@ -72,7 +72,9 @@ class Bot extends Trader {
     }
 
     outputTradeInfo() {
-        return console.log(`\nPair: ${this.asset} ${new Date().toTimeString()}\nLast Price: ${this.lastPrice}\nBuy Price: ${this.buyPrice}\nSell Price: ${this.sellPrice.toFixed(8)}\nStop Loss: ${this.stopLoss.toFixed(8)}\nTarget Price: ${this.targetPrice.toFixed(8)}\n`)
+        let pct = (this.lastPrice / this.buyPrice) - 1
+        pct *= 100
+        return console.log(`\nPair: ${this.asset} ${new Date().toTimeString()}\n${pct < 0 ? 'Down' : 'Up'}: ${pct.toFixed(2)}%\nLast Price: ${this.lastPrice}\nBuy Price: ${this.buyPrice}\nSell Price: ${this.sellPrice.toFixed(8)}\nStop Loss: ${this.stopLoss.toFixed(8)}\nTarget Price: ${this.targetPrice.toFixed(8)}\n`)
     }
 
     forcePriceUpdate(interval) {

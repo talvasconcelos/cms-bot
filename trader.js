@@ -58,11 +58,12 @@ class Trader extends EventEmitter{
         timer.on('stopped', () => {
             this.isTrading = false
             this.telegramInfoStop()
-            this.emit('traderEnded')
             console.log('Trader end.')
-            this.log.get('balance')
-                .push(this.balances.base)
-                .write()
+            if (!this.userStop) {
+                this.log.get('balance')
+                    .push(this.balances.base)
+                    .write()
+            }
             return
         })
         timer.on('started', () => {
@@ -76,7 +77,8 @@ class Trader extends EventEmitter{
         if(!this.isResuming){
             console.log('Not resuming last trade!')
             this.emit('tradeStart')
-            const buy = await this.buy()
+            const buy = this.buy()
+            await buy
             if(!buy) { 
                 await this.stopTrading()
                 return false
@@ -90,8 +92,10 @@ class Trader extends EventEmitter{
     stopTrading(opts) {
         if(!this.isTrading) { return }
         opts = opts || { cancel: false }
+        this.userStop = opts.userStop ? true : false
         const cancel = opts.cancel ? this.cancelOrder(this.order) : Promise.resolve()
         return cancel.then(() => {
+            this.emit('traderEnded', this.userStop)
             this.timer.stop()
             return
         })

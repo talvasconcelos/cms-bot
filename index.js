@@ -56,9 +56,10 @@ const telegramReport = (e) => {
     })
 
     e.on('tradeInfo', () => {
-        let pct = (1 - (price / e.buyPrice)) * 100
+        let pct = (e.lastPrice / e.buyPrice) - 1
+        pct *= 100
         let msg = `*${e.product}*
-        *${pct < 0 ? 'Down' : 'Up'}:* ${pct.toFixed(2)}
+        *${pct < 0 ? 'Down' : 'Up'}:* ${pct.toFixed(2)}%
         *Last Price:* ${e.lastPrice}
         *Buy Price:* ${e.buyPrice}
         *Sell Price:* ${e.sellPrice}
@@ -70,7 +71,6 @@ const telegramReport = (e) => {
     e.on('tradeInfoStop', () => {
         let msg = `${e.asset} trade ended!`
         slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
-        return startTrader(CACHE)
     })
 
     e.on('traderCheckOrder', (msg) => {
@@ -83,7 +83,8 @@ const telegramReport = (e) => {
     })
 
     e.on('priceUpdate', (price) => {
-        let upPct = (1 - (price / e.buyPrice)) * 100
+        let upPct = (price / e.buyPrice) - 1
+        upPct *= 100
         let msg = `Target price for ${e.asset} updated: ${price}. Up ${upPct}%`
         slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
     })
@@ -96,6 +97,11 @@ const telegramReport = (e) => {
     e.on('filledOrder', (price) => {
         let msg = `Bought ${e.asset} for ${price}!`
         slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
+    })
+
+    e.on('traderEnded', (restart) => {
+        slimbot.sendMessage(ID, `Trader ended`, { parse_mode: 'Markdown' }).catch(console.error)
+        if(!restart){ startTrader(CACHE) }
     })
 }
 
@@ -158,10 +164,9 @@ const startTrader = async (data) => {
 
 process.on('SIGINT', async () => {
     console.log('Stopping Trader Bot')
-    if(slimbot){ slimbot.sendMessage(config.telegramUserID, `Trader ended`, {parse_mode: 'Markdown'}).catch(console.error)}
     CACHE = null
     if(bot) {
-        await bot.stopTrading({cancel: (bot.isBuying || bot.isSelling) ? true : false})
+        await bot.stopTrading({cancel: (bot.isBuying || bot.isSelling) ? true : false, userStop: true})
     }
     await cmsWS.close()
     process.exit(0)
