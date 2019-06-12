@@ -115,7 +115,11 @@ class Trader extends EventEmitter{
             console.log(`Insuficient funds!`)
             return false
         }
-        const balance = this.maxBalance ? this.maxBalance : this.balances.base
+        const calcBalance = (bal) => {
+            let maxBalance = (this.maxBalance / 100) * bal
+            return maxBalance
+        }
+        const balance = this.maxBalance ? calcBalance(this.balances.base) : this.balances.base
         const price = this.roundToNearest(this.bestPrice, this.tickSize)
         const qty = this.roundToNearest((balance / price), this.minQty)
         
@@ -138,6 +142,7 @@ class Trader extends EventEmitter{
     }
 
     async sell() {
+        await this.syncBalances()
         let price = this.roundToNearest(this.lastPrice, this.tickSize)
         let qty = this.roundToNearest(this.balances.asset, this.minQty)
         return this.addOrder({
@@ -176,25 +181,25 @@ class Trader extends EventEmitter{
                     return false
                 }
                 this.buyPrice = result.price
-                if(result && result.status === 'FILLED'){
-                    this.retry = 0
-                    await this.syncBalances()
-                    console.log('order filled')
-                    this.log.get('trades')
-                        .push({
-                            timestamp: Date.now(),
-                            pair: this.product,
-                            buyPrice: this.buyPrice,
-                            state: result.side === 'BUY' ? 'opened' : 'closed'
-                        })
-                        .write()
-                    if(result.side === 'SELL'){
-                        this.emit('traderSold', result.price)
-                        return this.stopTrading()
-                    }
-                    this.emit('filledOrder', this.buyPrice)
-                    return true
-                }
+                // if(result && result.status === 'FILLED'){
+                //     this.retry = 0
+                //     await this.syncBalances()
+                //     console.log('order filled')
+                //     this.log.get('trades')
+                //         .push({
+                //             timestamp: Date.now(),
+                //             pair: this.product,
+                //             buyPrice: this.buyPrice,
+                //             state: result.side === 'BUY' ? 'opened' : 'closed'
+                //         })
+                //         .write()
+                //     if(result.side === 'SELL'){
+                //         this.emit('traderSold', result.price)
+                //         return this.stopTrading()
+                //     }
+                //     this.emit('filledOrder', this.buyPrice)
+                //     return true
+                // }
                 this.order = result
                 // this.log.get('orders')
                 //     .push({timestamp: Date.now(), order: this.order})
@@ -245,6 +250,7 @@ class Trader extends EventEmitter{
                 data.side === 'BUY' ? this.isBuying = false : this.isSelling = false
                 this.retry = 0
                 if(data.side === 'SELL') {
+                    console.log(data)
                     this.emit('traderSold', data.price)
                     this.log
                         .get('balance')

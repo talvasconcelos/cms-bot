@@ -85,7 +85,7 @@ const telegramReport = (e) => {
     e.on('priceUpdate', (price) => {
         let upPct = (price / e.buyPrice) - 1
         upPct *= 100
-        let msg = `Target price for ${e.asset} updated: ${price}. Up ${upPct}%`
+        let msg = `Target price for ${e.asset} updated: ${price}. New target ${upPct.toFixed(2)}%`
         slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
     })
 
@@ -116,7 +116,7 @@ const startTrader = async (data) => {
         client,
         base: config.currency,
         websocket,
-        //maxBalance: 0.0011
+        maxBalance: 50 //Percentage. 0 to disable
     })
     await bot.isLastTradeOpen()
     if(bot.isResuming) {

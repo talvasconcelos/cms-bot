@@ -5,7 +5,7 @@ class Bot extends Trader {
         super(options)
         this.TP = 1.3
         this._TP_p = 1.025
-        this._SL_p = 1.035
+        this._SL_p = 1.015
         this._TRAIL_p = 1.005
         this.targetPrice = null
         this.stopLoss = null
@@ -43,7 +43,7 @@ class Bot extends Trader {
         if(this.lastPrice >= this.targetPrice) {
             this.sellPrice = this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize)
             if((this.sellPrice / this.buyPrice) < this._TP_p){
-                this.sellPrice = this.targetPrice - this.tickSize
+                this.sellPrice = this.targetPrice - (this.tickSize * 2)
             }
             this.targetPrice = this.roundToNearest((this.targetPrice * this._TP_p), this.tickSize)
             console.log('Sell price updated:', this.sellPrice)
