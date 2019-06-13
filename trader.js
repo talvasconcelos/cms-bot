@@ -190,7 +190,7 @@ class Trader extends EventEmitter{
                         .push({
                             timestamp: Date.now(),
                             pair: this.product,
-                            price: result.side === 'BUY' ? this.buyPrice : this.ask
+                            price: result.side === 'BUY' ? this.buyPrice : this.ask,
                             state: result.side === 'BUY' ? 'opened' : 'closed'
                         })
                         .write()

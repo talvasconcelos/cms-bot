@@ -44,15 +44,18 @@ class Bot extends Trader {
             this.sellPrice = this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize)
             if((this.sellPrice / this.buyPrice) < this._TP_p){
                 this.sellPrice = this.targetPrice - (this.tickSize * 2)
+                this.targetPrice = this.targetPrice + (this.tickSize * 2)
+            }else{
+                this.targetPrice = this.roundToNearest((this.targetPrice * this._TP_p), this.tickSize)
             }
-            this.targetPrice = this.roundToNearest((this.targetPrice * this._TP_p), this.tickSize)
+            
             console.log('Sell price updated:', this.sellPrice)
             console.log('Target price updated:', this.targetPrice)
             this.emit('priceUpdate', this.targetPrice)
             return
         }
         if(this.lastPrice <= this.stopLoss) {
-            console.log('Stop Loss trigered. Selling!')            
+            console.log('Stop Loss trigered. Selling!')        
             return this.sell()
         }
         if(this.lastPrice < this.sellPrice) {
