@@ -261,7 +261,7 @@ class Trader extends EventEmitter{
                         .push({
                             timestamp: Date.now(),
                             pair: this.product,
-                            buyPrice: data.price,
+                            sellPrice: data.price,
                             state: 'closed'                            
                         })
                         .write()
