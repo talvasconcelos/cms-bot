@@ -181,25 +181,26 @@ class Trader extends EventEmitter{
                     return false
                 }
                 this.buyPrice = result.price
-                // if(result && result.status === 'FILLED'){
-                //     this.retry = 0
-                //     await this.syncBalances()
-                //     console.log('order filled')
-                //     this.log.get('trades')
-                //         .push({
-                //             timestamp: Date.now(),
-                //             pair: this.product,
-                //             buyPrice: this.buyPrice,
-                //             state: result.side === 'BUY' ? 'opened' : 'closed'
-                //         })
-                //         .write()
-                //     if(result.side === 'SELL'){
-                //         this.emit('traderSold', result.price)
-                //         return this.stopTrading()
-                //     }
-                //     this.emit('filledOrder', this.buyPrice)
-                //     return true
-                // }
+                if(result.status === 'FILLED'){
+                    this.retry = 0
+                    await this.syncBalances()
+                    await this.ticker()
+                    console.log('order filled')
+                    this.log.get('trades')
+                        .push({
+                            timestamp: Date.now(),
+                            pair: this.product,
+                            price: result.side === 'BUY' ? this.buyPrice : this.ask
+                            state: result.side === 'BUY' ? 'opened' : 'closed'
+                        })
+                        .write()
+                    if(result.side === 'SELL'){
+                        this.emit('traderSold', result.price)
+                        return this.stopTrading()
+                    }
+                    this.emit('filledOrder', this.buyPrice)
+                    return true
+                }
                 this.order = result
                 // this.log.get('orders')
                 //     .push({timestamp: Date.now(), order: this.order})
@@ -250,8 +251,9 @@ class Trader extends EventEmitter{
                 data.side === 'BUY' ? this.isBuying = false : this.isSelling = false
                 this.retry = 0
                 if(data.side === 'SELL') {
+                    this.ticker()
                     console.log(data)
-                    this.emit('traderSold', data.price)
+                    this.emit('traderSold', this.ask)
                     this.log
                         .get('balance')
                         .push(this.balances.base)
@@ -261,7 +263,7 @@ class Trader extends EventEmitter{
                         .push({
                             timestamp: Date.now(),
                             pair: this.product,
-                            sellPrice: data.price,
+                            price: this.ask,
                             state: 'closed'                            
                         })
                         .write()
@@ -277,7 +279,7 @@ class Trader extends EventEmitter{
                         .push({
                             timestamp: Date.now(),
                             pair: this.product,
-                            buyPrice: data.price,
+                            price: this.buyPrice,
                             state: 'opened'                       
                         })
                         .write()
@@ -342,6 +344,14 @@ class Trader extends EventEmitter{
         let minutes = Math.floor(time / 60000)
         let seconds = ((time % 60000) / 1000).toFixed(0)
         return (seconds == 60 ? (minutes + 1) + ":00" : minutes + ":" + (seconds < 10 ? "0" : "") + seconds)
+    }
+
+    ticker() {
+        return this.client.bookTicker({symbol: this.product})
+            .then(res => {
+                this.bid = res.bidPrice
+                this.ask = res.askPrice
+            })
     }
 
     midmarket_price() {
