@@ -265,6 +265,7 @@ class Trader extends EventEmitter{
                             state: 'closed'                            
                         })
                         .write()
+                    return this.stopTrading()
                 } else {
                     this.buyPrice = data.price
                     this.syncBalances()
@@ -281,7 +282,7 @@ class Trader extends EventEmitter{
                         })
                         .write()
                 }
-                return data.side === 'BUY' ? true : this.stopTrading()
+                return true
             }
 
             if(expired) {
@@ -324,8 +325,8 @@ class Trader extends EventEmitter{
                 const base = data.balances.find(b => b.asset === this.base).free
                 const asset = data.balances.find(b => b.asset === this.asset).free
                 this.balances = {
-                    base,
-                    asset
+                    base: base,
+                    asset: asset
                 }
                 // console.log(this.balances)
             })

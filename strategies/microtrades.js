@@ -52,8 +52,7 @@ class Bot extends Trader {
             return
         }
         if(this.lastPrice <= this.stopLoss) {
-            console.log('Stop Loss trigered. Selling!')
-            
+            console.log('Stop Loss trigered. Selling!')            
             return this.sell()
         }
         if(this.lastPrice < this.sellPrice) {
