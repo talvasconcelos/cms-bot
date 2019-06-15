@@ -293,7 +293,8 @@ class Trader extends EventEmitter{
 
             if(stillThere) {
                 if(this.retry > 3){
-                    return this.buy({market: true})
+                    return this.cancelOrder(this.order)
+                        .then(() => this.buy({market: true}))
                 }
                 return setTimeout(() => this.checkOrder(this.order), 30000)
             }
