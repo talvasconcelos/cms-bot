@@ -190,7 +190,7 @@ class Trader extends EventEmitter{
                         .push({
                             timestamp: Date.now(),
                             pair: this.product,
-                            price: result.side === 'BUY' ? this.buyPrice : this.ask,
+                            price: result.side === 'BUY' ? this.buyPrice : this.bid,
                             state: result.side === 'BUY' ? 'opened' : 'closed'
                         })
                         .write()
@@ -253,7 +253,7 @@ class Trader extends EventEmitter{
                 if(data.side === 'SELL') {
                     this.ticker()
                     console.log(data)
-                    this.emit('traderSold', this.ask)
+                    this.emit('traderSold', this.bid)
                     this.log
                         .get('balance')
                         .push(this.balances.base)
@@ -263,7 +263,7 @@ class Trader extends EventEmitter{
                         .push({
                             timestamp: Date.now(),
                             pair: this.product,
-                            price: this.ask,
+                            price: this.bid,
                             state: 'closed'                            
                         })
                         .write()
@@ -294,7 +294,7 @@ class Trader extends EventEmitter{
             if(stillThere) {
                 if(this.retry > 3){
                     return this.cancelOrder(this.order)
-                        .then(() => this.buy({market: true}))
+                        .then(() => this.buy())
                 }
                 return setTimeout(() => this.checkOrder(this.order), 30000)
             }
