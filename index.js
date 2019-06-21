@@ -167,8 +167,8 @@ process.on('SIGINT', async () => {
     CACHE = null
     if(bot) {
         await bot.stopTrading({
-            cancel: (bot.isBuying || bot.isSelling) ? true : false
-             userStop: true
+            cancel: (bot.isBuying || bot.isSelling) ? true : false,
+            userStop: true
             })
     }
     await cmsWS.close()
