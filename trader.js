@@ -141,15 +141,18 @@ class Trader extends EventEmitter{
         return this.addOrder(order)
     }
 
-    async sell() {
+    async sell(opts) {
+        opts = opts || {}
         await this.syncBalances()
-        let price = this.roundToNearest(this.lastPrice, this.tickSize)
+        await this.midmarket_price()
+        let market = opts.type === 'MARKET' ? true : false
+        let price = this.roundToNearest(market ? this.lastPrice : this.bestPrice, this.tickSize)
         let qty = this.roundToNearest(this.balances.asset, this.minQty)
         return this.addOrder({
             side: 'SELL',
             price: price.toFixed(8),
             quantity: qty,
-            type: 'MARKET'
+            type: opts.type || 'MARKET'
         })
     }
 

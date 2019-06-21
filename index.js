@@ -85,7 +85,7 @@ const telegramReport = (e) => {
     e.on('priceUpdate', (price) => {
         let upPct = (price / e.buyPrice) - 1
         upPct *= 100
-        let msg = `Target price for ${e.asset} updated: ${price}. New target ${upPct.toFixed(2)}%`
+        let msg = `Target price for ${e.asset} updated: ${price.toFixed(8)}. New target ${upPct.toFixed(2)}%`
         slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
     })
 
@@ -137,9 +137,9 @@ const startTrader = async (data) => {
             console.log('No pairs to trade!')
             return
         }
-        // if(pair[0].pair === 'BNBBTC'){
-        //   pair.shift()
-        // }
+        if(pair[0].pair === 'BNBBTC'){
+          pair.shift()
+        }
         console.log(pair)
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
@@ -166,7 +166,10 @@ process.on('SIGINT', async () => {
     console.log('Stopping Trader Bot')
     CACHE = null
     if(bot) {
-        await bot.stopTrading({cancel: (bot.isBuying || bot.isSelling) ? true : false, userStop: true})
+        await bot.stopTrading({
+            cancel: (bot.isBuying || bot.isSelling) ? true : false
+             userStop: true
+            })
     }
     await cmsWS.close()
     process.exit(0)
