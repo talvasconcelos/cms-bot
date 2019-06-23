@@ -224,7 +224,7 @@ class Trader extends EventEmitter{
 
     checkOrder(order) {
         this.retry++
-        if(this.retry > 4) {
+        if(this.retry > 8 && this.isBuying) {
             return this.stopTrading({cancel: true})
         }
         return this.client.queryOrder({
@@ -297,7 +297,7 @@ class Trader extends EventEmitter{
             if(stillThere) {
                 if(this.retry > 3){
                     return this.cancelOrder(this.order)
-                        .then(() => this.buy())
+                        .then(() => data.side === 'BUY' ? this.buy() : this.sell())
                 }
                 return setTimeout(() => this.checkOrder(this.order), 30000)
             }
