@@ -67,7 +67,7 @@ class Bot extends Trader {
             }
             console.log('Trailing Stop Loss trigered. Selling!')
             this.persistence = 0            
-            return this.sell({type: 'LIMIT'})
+            return this.sell(/*{type: 'LIMIT'}*/)
         }
         this.persistence > 0 ? this.persistence = 0 : null
         return
