@@ -198,7 +198,7 @@ class Trader extends EventEmitter{
                         })
                         .write()
                     if(result.side === 'SELL'){
-                        this.emit('traderSold', result.price)
+                        this.emit('traderSold', this.bid)
                         return this.stopTrading()
                     }
                     this.emit('filledOrder', this.buyPrice)
