@@ -30,18 +30,45 @@ const client = new api.BinanceRest({
   handleDrift: true
 })
 
-const bot = new Trader({
-  test: false,
-  client,
-  base: config.currency,
-  websocket: null,
-  maxBalance: 50 //Percentage. 0 to disable
-})
-
-async function test() {
-  bot.asset = 'XLM'
-  await bot.syncBalances()
-  return bot.balances
+const EMA = (arr, n = 10) => {
+  const k = 2/(n+1)
+  let emaArr = [arr[0]]
+  for(let i = 1; i < arr.length; i++){
+    emaArr.push(arr[i] * k + emaArr[i - 1] * (1 - k))
+  }
+  return emaArr
 }
 
-test().then(console.log)
+const websocket = new api.BinanceWS()
+const hl2 = (h, l) => (+h + +l) / 2
+// const bot = new Trader({
+//   test: false,
+//   client,
+//   base: config.currency,
+//   websocket,
+//   maxBalance: 50 //Percentage. 0 to disable
+// })
+let support = []
+client.klines({
+  symbol: 'BNBBTC',
+  interval: '1m',
+  limit: 50
+})
+.then(res => res.map(c => support.push(hl2(c.high, c.low))))
+//.then(res => EMA(res))
+// support.then(console.log)
+websocket.onKline('BNBBTC', '1m', (data) => {
+  if(data.kline.final){
+    support.shift()
+    support.push(hl2(data.kline.high, data.kline.low))
+    console.log(EMA(support), data.kline.high);
+  }
+});
+
+// async function test() {
+//   bot.asset = 'XLM'
+//   await bot.syncBalances()
+//   return bot.balances
+// }
+
+// test().then(console.log)

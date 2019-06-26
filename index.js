@@ -140,6 +140,7 @@ const startTrader = async (data) => {
         if(pair[0].pair === 'BNBBTC'){
           pair.shift()
         }
+        
         console.log(pair)
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
