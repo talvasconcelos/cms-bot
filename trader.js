@@ -42,7 +42,7 @@ class Trader extends EventEmitter{
         } else {
             console.log('Last trade open!')
             this.product = last.pair
-            this.buyPrice = +last.buyPrice
+            this.buyPrice = +last.price
             this.isResuming = true
             return last
         }
@@ -53,6 +53,7 @@ class Trader extends EventEmitter{
         this.product = opts.pair
         opts.callback = this.executeStrategy.bind(this)
         if(this.isTrading) { return false }
+        if(this.product === 'BNBBTC'){ return false }
 
         const timer = new continuous(opts)
         timer.on('stopped', () => {
@@ -77,8 +78,7 @@ class Trader extends EventEmitter{
         if(!this.isResuming){
             console.log('Not resuming last trade!')
             this.emit('tradeStart')
-            const buy = this.buy()
-            await buy
+            const buy = await this.buy()
             if(!buy) { 
                 await this.stopTrading()
                 return false

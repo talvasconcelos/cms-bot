@@ -48,22 +48,23 @@ const hl2 = (h, l) => (+h + +l) / 2
 //   websocket,
 //   maxBalance: 50 //Percentage. 0 to disable
 // })
-let support = []
-client.klines({
-  symbol: 'BNBBTC',
-  interval: '1m',
-  limit: 50
-})
-.then(res => res.map(c => support.push(hl2(c.high, c.low))))
-//.then(res => EMA(res))
-// support.then(console.log)
-websocket.onKline('BNBBTC', '1m', (data) => {
-  if(data.kline.final){
-    support.shift()
-    support.push(hl2(data.kline.high, data.kline.low))
-    console.log(EMA(support), data.kline.high);
-  }
-});
+let support = [0]
+console.log(support.length ? support.length : 'False')
+// client.klines({
+//   symbol: 'BNBBTC',
+//   interval: '1m',
+//   limit: 50
+// })
+// .then(res => res.map(c => support.push(hl2(c.high, c.low))))
+// //.then(res => EMA(res))
+// // support.then(console.log)
+// websocket.onKline('BNBBTC', '1m', (data) => {
+//   if(data.kline.final){
+//     support.shift()
+//     support.push(hl2(data.kline.high, data.kline.low))
+//     console.log(EMA(support), data.kline.high);
+//   }
+// });
 
 // async function test() {
 //   bot.asset = 'XLM'

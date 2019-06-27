@@ -116,7 +116,7 @@ const startTrader = async (data) => {
         client,
         base: config.currency,
         websocket,
-        maxBalance: 50 //Percentage. 0 to disable
+        maxBalance: 0 //Percentage. 0 to disable
     })
     await bot.isLastTradeOpen()
     if(bot.isResuming) {
@@ -137,30 +137,38 @@ const startTrader = async (data) => {
             console.log('No pairs to trade!')
             return
         }
-        if(pair[0].pair === 'BNBBTC'){
-          pair.shift()
-        }
         
         console.log(pair)
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
-        if (pair[0].pair && diff < 20) {
-            // pair.some(p => {
-            //     return bot.startTrading({pair: p.pair, time: 30000}).catch(console.error)
-            // })
-            bot.startTrading({ pair: pair[0].pair, time: 30000 })
-            .then(res => {
-                if(!res && pair[1].pair){
-                    bot.startTrading({ pair: pair[1].pair, time: 30000 })
+        if (diff < 20) {
+            let x = null
+            for (let i = 0; i < pair.length; i++) {
+                await bot.startTrading({ pair: pair[i].pair, time: 30000 })
+                    .then(res => {
+                        x = res
+                        console.log(pair[i], res)
+                    }).catch(console.error)
+                if (x) {
+                    break
                 }
-            })
-            .catch(console.error)
-        } else {
-            console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
+            }
+                // pair.some(p => {
+                //     return bot.startTrading({pair: p.pair, time: 30000}).catch(console.error)
+                // })
+                // bot.startTrading({ pair: pair[0].pair, time: 30000 })
+                // .then(res => {
+                //     if(!res && pair[1].pair){
+                //         bot.startTrading({ pair: pair[1].pair, time: 30000 })
+                //     }
+                // })
+                // .catch(console.error)
+            } else {
+                console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
+            }
         }
-    }
-    telegramReport(bot)
-    return bot
+        telegramReport(bot)
+        return bot
 }
 
 process.on('SIGINT', async () => {
