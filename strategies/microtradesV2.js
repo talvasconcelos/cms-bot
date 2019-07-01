@@ -3,7 +3,7 @@ const Trader = require('../trader')
 class Bot extends Trader {
     constructor(options) {
         super(options)
-        this.TP = 1.3
+        this.TP = 1.1
         this._TP_p = 1.02
         this._SL_p = 1.015
         this._TRAIL_p = 1.005
@@ -13,6 +13,7 @@ class Bot extends Trader {
         this.initialPrices = true
         this.supportData = []
         this.support = null
+        this.N = 10
         this.forcePriceUpdate(3600000)
     }
 
@@ -49,15 +50,15 @@ class Bot extends Trader {
         }
         if(this.lastPrice >= this.targetPrice) {
             this.targetPrice = this.roundToNearest((this.targetPrice * this._TP_p), this.tickSize)
-                        
+            this.N = 5
             console.log('Target price updated:', this.targetPrice)
             this.emit('priceUpdate', this.targetPrice)
             return
         }
-        if(this.lastPrice <= this.stopLoss) {
-            console.log('Stop Loss trigered. Selling!')        
-            return this.sell()
-        }
+        // if(this.lastPrice <= this.stopLoss) {
+        //     console.log('Stop Loss trigered. Selling!')        
+        //     return this.sell()
+        // }
         if(this.lastPrice < this.sellPrice) {
             if(this.persistence <= 2) {
                 this.persistence++
@@ -86,7 +87,7 @@ class Bot extends Trader {
     emaSupport() {
         this.client.klines({
             symbol: this.product,
-            interval: '1h',
+            interval: '4h',
             limit: 50
         })
         .then(res => res.map(c => this.supportData.push(this.hl2(c.high, c.low))))
@@ -97,9 +98,13 @@ class Bot extends Trader {
                 if (data.kline.final) {
                     this.supportData.shift()
                     this.supportData.push(this.hl2(data.kline.high, data.kline.low))
-                    this.support = this.ema(this.supportData)
+                    this.support = this.ema(this.supportData, this.N)
                     this.stopLoss = this.roundToNearest(this.support[this.support.length - 1], this.tickSize)
                     this.sellPrice = this.stopLoss + (this.tickSize * 2)
+                    if (+data.kline.close < this.stopLoss) {
+                        console.log('Stop Loss trigered. Selling!')
+                        this.sell()
+                    }
                     //   console.log(EMA(support), data.kline.high)
                 }
             })

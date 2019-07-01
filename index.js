@@ -141,7 +141,7 @@ const startTrader = async (data) => {
         console.log(pair)
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
-        if (diff < 20) {
+        if (diff < 25) {
             let x = null
             for (let i = 0; i < pair.length; i++) {
                 await bot.startTrading({ pair: pair[i].pair, time: 30000 })
