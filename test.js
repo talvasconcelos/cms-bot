@@ -27,7 +27,8 @@ const client = new api.BinanceRest({
   timeout: 15000, // Optional, defaults to 15000, is the request time out in milliseconds
   recvWindow: 20000, // Optional, defaults to 5000, increase if you're getting timestamp errors
   disableBeautification: false,
-  handleDrift: true
+  handleDrift: true,
+  reconnect: false
 })
 
 const EMA = (arr, n = 10) => {
@@ -39,7 +40,7 @@ const EMA = (arr, n = 10) => {
   return emaArr
 }
 
-const websocket = new api.BinanceWS()
+let websocket = new api.BinanceWS()
 const hl2 = (h, l) => (+h + +l) / 2
 // const bot = new Trader({
 //   test: false,
@@ -58,13 +59,14 @@ console.log(support.length ? support.length : 'False')
 // .then(res => res.map(c => support.push(hl2(c.high, c.low))))
 // //.then(res => EMA(res))
 // // support.then(console.log)
-// websocket.onKline('BNBBTC', '1m', (data) => {
-//   if(data.kline.final){
-//     support.shift()
-//     support.push(hl2(data.kline.high, data.kline.low))
-//     console.log(EMA(support), data.kline.high);
-//   }
-// });
+websocket.onKline('BNBBTC', '1m', (data) => {
+  if(data.kline.final){
+    support.shift()
+    support.push(hl2(data.kline.high, data.kline.low))
+    console.log(EMA(support), data.kline.high)
+    this.close()
+  }
+})
 
 // async function test() {
 //   bot.asset = 'XLM'

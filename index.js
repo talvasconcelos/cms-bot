@@ -22,8 +22,6 @@ const client = new api.BinanceRest({
     handleDrift: true
 })
 
-const websocket = new api.BinanceWS()
-
 let CACHE = null
 
 slimbot && slimbot.sendMessage(config.telegramUserID, `Trader started`, {parse_mode: 'Markdown'}).catch(console.error)
@@ -32,7 +30,7 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
   timeout: 5e3,
   maxAttempts: 10,
   onopen: e => console.log('Connected!'),
-  onmessage: e => {
+  onmessage: e => { 
     const data = JSON.parse(e.data)
     CACHE = data
     if (!data.hasOwnProperty('to')) { return }
@@ -111,6 +109,8 @@ const startTrader = async (data) => {
         return
     }
     const regex = RegExp(/(BTC)$/g)
+    const websocket = new api.BinanceWS()
+
     bot = new Trader({
         test: false,
         client,
@@ -118,9 +118,10 @@ const startTrader = async (data) => {
         websocket,
         maxBalance: 0 //Percentage. 0 to disable
     })
+
     await bot.isLastTradeOpen()
     if(bot.isResuming) {
-        bot.startTrading({ pair: bot.product, time: 30000 }).catch(console.error)
+        bot.startTrading({ pair: bot.product, time: config.interval }).catch(console.error)
     }
     if (!bot.isResuming && data.hasOwnProperty('to') && data.to == 'trader') {
         // console.log(data)
@@ -141,10 +142,10 @@ const startTrader = async (data) => {
         console.log(pair)
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
-        if (diff < 25) {
+        if (diff < 20) {
             let x = null
             for (let i = 0; i < pair.length; i++) {
-                await bot.startTrading({ pair: pair[i].pair, time: 30000 })
+                await bot.startTrading({ pair: pair[i].pair, time: config.interval })
                     .then(res => {
                         x = res
                         console.log(pair[i], res)

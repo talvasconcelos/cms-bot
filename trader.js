@@ -95,8 +95,8 @@ class Trader extends EventEmitter{
         this.userStop = opts.userStop ? true : false
         const cancel = opts.cancel ? this.cancelOrder(this.order) : Promise.resolve()
         return cancel.then(() => {
-            this.emit('traderEnded', this.userStop)
             this.timer.stop()
+            this.emit('traderEnded', this.userStop)
             return
         })
     }
@@ -184,7 +184,7 @@ class Trader extends EventEmitter{
                     return false
                 }
                 this.buyPrice = result.price
-                if(result.status === 'FILLED'){
+                /*if(result.status === 'FILLED'){
                     this.retry = 0
                     await this.syncBalances()
                     await this.ticker()
@@ -203,7 +203,7 @@ class Trader extends EventEmitter{
                     }
                     this.emit('filledOrder', this.buyPrice)
                     return true
-                }
+                }*/
                 this.order = result
                 // this.log.get('orders')
                 //     .push({timestamp: Date.now(), order: this.order})
@@ -230,7 +230,7 @@ class Trader extends EventEmitter{
         return this.client.queryOrder({
             symbol: order.symbol,
             orderId : order.orderId
-        }).then(data => {
+        }).then(async data => {
             let filled = data.status === 'FILLED'
             let stillThere = data.status === 'NEW' || data.status === 'PARTIALLY_FILLED'
             let canceledManually = data.status === 'CANCELED' || data.status === 'REJECTED'
@@ -251,33 +251,32 @@ class Trader extends EventEmitter{
             if(canceledManually) { return false }
 
             if(filled) { 
-                data.side === 'BUY' ? this.isBuying = false : this.isSelling = false
                 this.retry = 0
                 if(data.side === 'SELL') {
-                    this.ticker()
+                    this.isSelling = false
+                    await this.ticker()
                     console.log(data)
-                    this.emit('traderSold', this.bid)
+                    this.emit('traderSold', data.price)
                     this.log
                         .get('balance')
                         .push(this.balances.base)
-                        // .get('orders')
-                        // .push({timestamp: Date.now(), order: this.order})
+                        .write()
+                    this.log
                         .get('trades')
                         .push({
                             timestamp: Date.now(),
                             pair: this.product,
-                            price: this.bid,
-                            state: 'closed'                            
+                            price: data.type === 'LIMIT' ? data.price : this.bid,
+                            state: 'closed'
                         })
                         .write()
                     return this.stopTrading()
                 } else {
+                    this.isBuying = false
                     this.buyPrice = data.price
                     this.syncBalances()
                     this.emit('filledOrder', this.buyPrice)
                     this.log
-                        // .get('orders')
-                        // .push({timestamp: Date.now(), order: this.order})
                         .get('trades')
                         .push({
                             timestamp: Date.now(),
@@ -295,6 +294,9 @@ class Trader extends EventEmitter{
             }
 
             if(stillThere) {
+                if(data.status === 'PARTIALLY_FILLED'){
+                    return setTimeout(() => this.checkOrder(this.order), 30000)
+                }
                 if(this.retry > 3){
                     return this.cancelOrder(this.order)
                         .then(() => data.side === 'BUY' ? this.buy() : this.sell())
