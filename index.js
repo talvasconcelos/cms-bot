@@ -32,7 +32,6 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
   onopen: e => console.log('Connected!'),
   onmessage: e => { 
     const data = JSON.parse(e.data)
-    CACHE = data
     if (!data.hasOwnProperty('to')) { return }
     return startTrader(data)
   },
@@ -140,9 +139,10 @@ const startTrader = async (data) => {
         }
         
         console.log(pair)
+        CACHE = pair
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
-        if (diff < 20) {
+        if (diff < 15) {
             let x = null
             for (let i = 0; i < pair.length; i++) {
                 await bot.startTrading({ pair: pair[i].pair, time: config.interval })
@@ -151,6 +151,7 @@ const startTrader = async (data) => {
                         console.log(pair[i], res)
                     }).catch(console.error)
                 if (x) {
+                    CACHE.splice(i, 1)
                     break
                 }
             }

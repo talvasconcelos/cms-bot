@@ -28,9 +28,9 @@ class Trader extends EventEmitter{
         this.retry = 0
         await this.syncBalances()
         await this.midmarket_price()
-        this.log.get('balance')
-                .push(this.balances.base)
-                .write()
+        // this.log.get('balance')
+        //         .push(this.balances.base)
+        //         .write()
     }
 
     isLastTradeOpen() {
@@ -127,7 +127,7 @@ class Trader extends EventEmitter{
             console.error('Minimum order must be', this._minOrder + '.')
             return false
         }
-        if(price < 0.00000150){
+        if(price < 0.0000150){
             console.log('Price too low!')
             return false
         }
@@ -146,7 +146,7 @@ class Trader extends EventEmitter{
         await this.syncBalances()
         await this.midmarket_price()
         let market = opts.type === 'MARKET' ? true : false
-        let price = this.roundToNearest(market ? this.lastPrice : this.bestPrice, this.tickSize)
+        let price = this.roundToNearest(market ? this.lastPrice : opts.price ? opts.price : this.bestPrice, this.tickSize)
         let qty = this.roundToNearest(this.balances.asset, this.minQty)
         return this.addOrder({
             side: 'SELL',
@@ -255,6 +255,7 @@ class Trader extends EventEmitter{
                 if(data.side === 'SELL') {
                     this.isSelling = false
                     await this.ticker()
+                    await this.syncBalances()
                     console.log(data)
                     this.emit('traderSold', data.price)
                     this.log
@@ -274,7 +275,7 @@ class Trader extends EventEmitter{
                 } else {
                     this.isBuying = false
                     this.buyPrice = data.price
-                    this.syncBalances()
+                    await this.syncBalances()
                     this.emit('filledOrder', this.buyPrice)
                     this.log
                         .get('trades')
@@ -295,13 +296,14 @@ class Trader extends EventEmitter{
 
             if(stillThere) {
                 if(data.status === 'PARTIALLY_FILLED'){
-                    return setTimeout(() => this.checkOrder(this.order), 30000)
+                    this.partial = true
+                    return setTimeout(() => this.checkOrder(this.order), 60000)
                 }
                 if(this.retry > 3){
                     return this.cancelOrder(this.order)
-                        .then(() => data.side === 'BUY' ? this.buy() : this.sell())
+                        .then(() => data.side === 'BUY' ? this.buy({market: true}) : this.sell({type: 'LIMIT'}))
                 }
-                return setTimeout(() => this.checkOrder(this.order), 30000)
+                return setTimeout(() => this.checkOrder(this.order), 60000)
             }
         })
         .catch(err => {
