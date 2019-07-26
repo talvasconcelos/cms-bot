@@ -127,7 +127,7 @@ class Trader extends EventEmitter{
             console.error('Minimum order must be', this._minOrder + '.')
             return false
         }
-        if(price < 0.0000150){
+        if(price < 0.00000150){
             console.log('Price too low!')
             return false
         }
@@ -175,7 +175,7 @@ class Trader extends EventEmitter{
         }
         const executeOrder = this.test ? this.client.testOrder(order) : this.client.newOrder(order)
         return executeOrder
-            .then(async result => {
+            .then(result => {
                 if(result && result.code < 0) {
                     console.log(`Order as an error:`, result)
                     this.log.get('errors')
@@ -218,6 +218,7 @@ class Trader extends EventEmitter{
                 this.log.get('errors')
                     .push({timestamp: Date.now(), pair: this.product, error: err})
                     .write()
+                this.stopTrading()
                 return false
             })
     }

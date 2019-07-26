@@ -114,10 +114,10 @@ class Bot extends Trader {
                     this.supportData.push(this.hl2(data.kline.high, data.kline.low))
                     this.support = this.ema(this.supportData, this.N)
                     this.stopLoss = this.roundToNearest(this.support[this.support.length - 1], this.tickSize)
-                    // if(this.stopLoss > this.buyPrice){
-                    //     this.stopLoss = this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
-                    // }
-                    // this.sellPrice = this.stopLoss
+                    if(this.stopLoss > this.buyPrice){
+                        this.stopLoss = this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
+                    }
+                    this.sellPrice = this.stopLoss
                     if (+data.kline.close < this.stopLoss) {
                         console.log('Stop Loss trigered. Selling!')
                         this.sell()
