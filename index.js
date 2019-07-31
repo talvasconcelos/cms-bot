@@ -122,7 +122,7 @@ const startTrader = async (data) => {
     if(bot.isResuming) {
         bot.startTrading({ pair: bot.product, time: config.interval }).catch(console.error)
     }
-    if (!bot.isResuming && data.hasOwnProperty('to') && data.to == 'trader') {
+    if (!bot.isResuming && data && data.hasOwnProperty('to') && data.to == 'trader') {
         // console.log(data)
         if (bot && bot.is_trading) {
             console.log(`Bot is trading!`)
@@ -145,6 +145,9 @@ const startTrader = async (data) => {
         if (diff < 15) {
             let x = null
             for (let i = 0; i < pair.length; i++) {
+                if(pair.prob < 0.998) {
+                    break
+                }
                 await bot.startTrading({ pair: pair[i].pair, time: config.interval })
                     .then(res => {
                         x = res

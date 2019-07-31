@@ -5,7 +5,7 @@ class Bot extends Trader {
         super(options)
         this.TP = 1.05
         this._TP_p = 1.025
-        this._SL_p = 1.015
+        this._SL_p = 1.025
         this._TRAIL_p = 1.005
         this.targetPrice = null
         this.stopLoss = null
@@ -18,7 +18,7 @@ class Bot extends Trader {
     }
 
     executeStrategy() {
-        if(!this.isTrading){ return }
+        if(!this.isTrading || this.isBuying){ return }
         if(!this.support) {
             console.log('No support')
             return this.emaSupport()
@@ -39,7 +39,7 @@ class Bot extends Trader {
         this.targetPrice = this.roundToNearest(this.buyPrice * this._TP_p, this.tickSize)
         this.stopLoss = this.roundToNearest(this.support[this.support.length - 1], this.tickSize)
         if(this.stopLoss > this.buyPrice){
-            this.stopLoss = this.stopLoss = this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
+            this.stopLoss = this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
         }
         this.sellPrice = this.stopLoss
         this.initialPrices = false
@@ -64,7 +64,7 @@ class Bot extends Trader {
 
         if(this.lastPrice >= this.targetPrice) {
             this.targetPrice = this.roundToNearest((this.targetPrice * this._TP_p), this.tickSize)
-            this.sellPrice = this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize)
+            this.sellPrice = pctOk ? this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize) : this.stopLoss
             console.log('Target price updated:', this.targetPrice, pctOk, (this.lastPrice / this.buyPrice), (this._TP_p + this._TRAIL_p) - 1)
             this.emit('priceUpdate', this.targetPrice)
             return

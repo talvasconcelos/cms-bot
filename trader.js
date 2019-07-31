@@ -1,6 +1,10 @@
 const EventEmitter = require('events')
+const readline = require('readline')
 const continuous = require('continuous')
 const db = require('./logger')
+
+readline.emitKeypressEvents(process.stdin)
+process.stdin.setRawMode(true)
 
 class Trader extends EventEmitter{
     constructor(opts){
@@ -31,6 +35,18 @@ class Trader extends EventEmitter{
         // this.log.get('balance')
         //         .push(this.balances.base)
         //         .write()
+    }
+
+    keypress() {
+        process.stdin.on('keypress', (str, key) => {
+            if(!this.isTrading || this.isBuying || this.isSelling) {return}
+            if (key.ctrl && key.name === 's') {
+                console.log('Panic selling!!')
+                this.sell()
+            } else {
+                console.log(`You pressed the "${str}" key`)
+            }
+          })
     }
 
     isLastTradeOpen() {
@@ -127,7 +143,7 @@ class Trader extends EventEmitter{
             console.error('Minimum order must be', this._minOrder + '.')
             return false
         }
-        if(price < 0.00000150){
+        if(price < 0.00000199){
             console.log('Price too low!')
             return false
         }
@@ -291,9 +307,9 @@ class Trader extends EventEmitter{
                 return true
             }
 
-            if(expired) {
-                return data.side === 'BUY' ? this.buy() : this.sell()
-            }
+            // if(expired) {
+            //     return data.side === 'BUY' ? this.buy() : this.sell()
+            // }
 
             if(stillThere) {
                 if(data.status === 'PARTIALLY_FILLED'){
