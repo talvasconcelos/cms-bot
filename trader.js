@@ -32,6 +32,7 @@ class Trader extends EventEmitter{
         this.retry = 0
         await this.syncBalances()
         await this.midmarket_price()
+        this.keypress()
         // this.log.get('balance')
         //         .push(this.balances.base)
         //         .write()
@@ -39,8 +40,11 @@ class Trader extends EventEmitter{
 
     keypress() {
         process.stdin.on('keypress', (str, key) => {
-            if(!this.isTrading || this.isBuying || this.isSelling) {return}
+            if (key.ctrl && key.name === 'c') {
+                process.exit()
+            }
             if (key.ctrl && key.name === 's') {
+                if(!this.isTrading || this.isBuying || this.isSelling) {return}
                 console.log('Panic selling!!')
                 this.sell()
             } else {
@@ -412,6 +416,7 @@ class Trader extends EventEmitter{
 
     telegramInfoStop() {
         clearInterval(this.telegramInfo)
+        this.telegramInfo = null
         this.emit('tradeInfoStop')
     }
 }

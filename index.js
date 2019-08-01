@@ -11,6 +11,13 @@ const telegram = (apikey) => {
     return slimbot
 }
 
+const helpMsg = `
+/help : display this list
+/pause: pause the trader
+/resume: resume trader
+/sell: make a limit sell order at the last price
+`
+
 const slimbot = config.telegram ? telegram(config.telegramAPI) : null
 
 const client = new api.BinanceRest({
@@ -47,8 +54,35 @@ const telegramReport = (e) => {
     if (!config.telegram || !slimbot) { return }
     const ID = config.telegramUserID
 
+    slimbot.on('message', msg => {
+        const action = msg.text
+        switch (true) {
+            case action === '/help':
+                slimbot.sendMessage(ID, helpMsg, { parse_mode: 'Markdown' })
+                break
+            case action === '/sell':
+                slimbot.sendMessage(ID, `Sell message received! Selling ${e.asset} for ${e.lastPrice}.`)
+                e.sell({price: e.lastPrice})
+                break
+            case action === '/pause':
+                slimbot.sendMessage(ID, `Stopping trader! To resume write "resume".`)
+                e.stopTrading({
+                    cancel: (e.isBuying || e.isSelling) ? true : false,
+                    userStop: true
+                })
+                break
+            case action === '/resume':
+                slimbot.sendMessage(ID, `Resuming trader on ${e.asset}!`)
+                startTrader(null, true)
+                break
+            default:
+                slimbot.sendMessage(ID, `Action not recognized! Type /help for a list of commands.`)
+                break
+        }
+    })
+
     e.on('tradeStart', () => {
-        let msg = `Buying ${bot.asset}.`
+        let msg = `Buying ${e.asset}.`
         slimbot.sendMessage(ID, msg, { parse_mode: 'Markdown' }).catch(console.error)
     })
 
@@ -102,7 +136,7 @@ const telegramReport = (e) => {
     })
 }
 
-const startTrader = async (data) => {
+const startTrader = async (data, telegramAction = false) => {
     if(bot && bot.isTrading) {
         console.log(`Bot is trading on ${bot.asset}`)
         return
@@ -110,13 +144,15 @@ const startTrader = async (data) => {
     const regex = RegExp(/(BTC)$/g)
     const websocket = new api.BinanceWS()
 
-    bot = new Trader({
-        test: false,
-        client,
-        base: config.currency,
-        websocket,
-        maxBalance: 0 //Percentage. 0 to disable
-    })
+    if(!telegramAction) {
+        bot = new Trader({
+            test: false,
+            client,
+            base: config.currency,
+            websocket,
+            maxBalance: 0 //Percentage. 0 to disable
+        })
+    }
 
     await bot.isLastTradeOpen()
     if(bot.isResuming) {
@@ -172,11 +208,11 @@ const startTrader = async (data) => {
                 console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
             }
         }
-        telegramReport(bot)
+        if(!telegramAction) {telegramReport(bot)}
         return bot
 }
 
-process.on('SIGINT', async () => {
+process.on('exit', async () => {
     console.log('Stopping Trader Bot')
     CACHE = null
     if(bot) {
