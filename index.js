@@ -96,7 +96,7 @@ function telegramReport() {
         }
     })
 
-    if (bot) {
+    if(bot) {
         const e = bot
         e.on('tradeStart', () => {
             let msg = `Buying ${e.asset}.`
@@ -172,6 +172,8 @@ function telegramReport() {
                 startTrader(CACHE)
             }
         })
+    } else {
+        null
     }
 }
 
