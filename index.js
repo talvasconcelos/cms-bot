@@ -99,85 +99,81 @@ function telegramReport() {
         }
     })
 
-    if(bot) {
-        const e = bot
-        e.on('tradeStart', () => {
-            let msg = `Buying ${e.asset}.`
-            slimbot.sendMessage(ID, msg, {
-                parse_mode: 'Markdown'
-            }).catch(console.error)
-        })
+    
+    bot && bot.on('tradeStart', () => {
+        let msg = `Buying ${bot.asset}.`
+        slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+    })
 
-        e.on('tradeInfo', () => {
-            let pct = (e.lastPrice / e.buyPrice) - 1
-            pct *= 100
-            let msg = `*${e.product}*
-        *${pct < 0 ? 'Down' : 'Up'}:* ${pct.toFixed(2)}%
-        *Last Price:* ${e.lastPrice}
-        *Buy Price:* ${e.buyPrice}
-        *Sell Price:* ${e.sellPrice}
-        *Stop Loss:* ${e.stopLoss}
-        *Target Price:* ${e.targetPrice}`
-            slimbot.sendMessage(ID, msg, {
-                parse_mode: 'Markdown'
-            }).catch(console.error)
-        })
+    bot && bot.on('tradeInfo', () => {
+        let pct = (bot.lastPrice / bot.buyPrice) - 1
+        pct *= 100
+        let msg = `*${bot.product}*
+    *${pct < 0 ? 'Down' : 'Up'}:* ${pct.toFixed(2)}%
+    *Last Price:* ${bot.lastPrice}
+    *Buy Price:* ${bot.buyPrice}
+    *Sell Price:* ${bot.sellPrice}
+    *Stop Loss:* ${bot.stopLoss}
+    *Target Price:* ${bot.targetPrice}`
+        slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+    })
 
-        e.on('tradeInfoStop', () => {
-            let msg = `${e.asset} trade ended!`
-            slimbot.sendMessage(ID, msg, {
-                parse_mode: 'Markdown'
-            }).catch(console.error)
-        })
+    bot && bot.on('tradeInfoStop', () => {
+        let msg = `${bot.asset} trade ended!`
+        slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+    })
 
-        e.on('traderCheckOrder', (msg) => {
-            slimbot.sendMessage(ID, msg, {
-                parse_mode: 'Markdown'
-            }).catch(console.error)
-        })
+    bot && bot.on('traderCheckOrder', (msg) => {
+        slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+    })
 
-        e.on('traderPersistenceTrigger', (count) => {
-            let msg = `Sell price triggered, persistence activated: ${count}!`
-            slimbot.sendMessage(ID, msg, {
-                parse_mode: 'Markdown'
-            }).catch(console.error)
-        })
+    bot && bot.on('traderPersistenceTrigger', (count) => {
+        let msg = `Sell price triggered, persistence activated: ${count}!`
+        slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+    })
 
-        e.on('priceUpdate', (price) => {
-            let upPct = (price / e.buyPrice) - 1
-            upPct *= 100
-            let msg = `Target price for ${e.asset} updated: ${price.toFixed(8)}. New target ${upPct.toFixed(2)}%`
-            slimbot.sendMessage(ID, msg, {
-                parse_mode: 'Markdown'
-            }).catch(console.error)
-        })
+    bot && bot.on('priceUpdate', (price) => {
+        let upPct = (price / bot.buyPrice) - 1
+        upPct *= 100
+        let msg = `Target price for ${bot.asset} updated: ${price.toFixed(8)}. New target ${upPct.toFixed(2)}%`
+        slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+    })
 
-        e.on('traderSold', (price) => {
-            let msg = `Sold ${e.asset} for ${price}!`
-            slimbot.sendMessage(ID, msg, {
-                parse_mode: 'Markdown'
-            }).catch(console.error)
-            bot = null
-        })
+    bot && bot.on('traderSold', (price) => {
+        let msg = `Sold ${bot.asset} for ${price}!`
+        slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+        bot = null
+    })
 
-        e.on('filledOrder', (price) => {
-            let msg = `Bought ${e.asset} for ${price}!`
-            slimbot.sendMessage(ID, msg, {
-                parse_mode: 'Markdown'
-            }).catch(console.error)
-        })
+    bot && bot.on('filledOrder', (price) => {
+        let msg = `Bought ${bot.asset} for ${price}!`
+        slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+    })
 
-        e.on('traderEnded', (restart) => {
-            slimbot.sendMessage(ID, `Trader ended`, {
-                parse_mode: 'Markdown'
-            }).catch(console.error)
-            if (!restart) {
-                startTrader(CACHE)
-            }
-        })
-    } else {
-        null
-    }
+    bot && bot.on('traderEnded', (restart) => {
+        slimbot.sendMessage(ID, `Trader ended`, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+        if (!restart) {
+            startTrader(CACHE)
+        }
+    })
 }
 
 function keypress() {
@@ -213,10 +209,10 @@ async function startTrader(data, telegramAction = false) {
             client,
             base: config.currency,
             websocket,
-            TP: config.TAKE_PROFIT,
-            TP_p: config.PARTIAL_TP,
-            SL: config.STOP_LIMIT,
-            TRAIL: config.TRAILING_SL,
+            TP: (config.TAKE_PROFIT / 100) + 1,
+            TP_p: (config.PARTIAL_TP / 100) + 1,
+            SL: (config.STOP_LIMIT / 100) + 1,
+            TRAIL: (config.TRAILING_SL / 100) + 1,
             maxBalance: config.MAX_BALANCE
         })
     }
