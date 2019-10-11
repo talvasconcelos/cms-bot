@@ -1,10 +1,6 @@
 const EventEmitter = require('events')
-const readline = require('readline')
 const continuous = require('continuous')
 const db = require('./logger')
-
-readline.emitKeypressEvents(process.stdin)
-process.stdin.setRawMode(true)
 
 class Trader extends EventEmitter{
     constructor(opts){
@@ -19,6 +15,11 @@ class Trader extends EventEmitter{
         this.sellPrice = null
         this.isResuming = false
         this.log = db
+        this.TP = opts.TP || 1.05
+        this._TP_p = opts.TP_p || 1.025
+        this._SL_p = opts.SL || 1.025
+        this._TRAIL_p = opts.TRAIL || 1.005
+        // this.keypress()
     }
 
     async initTrader() {
@@ -32,31 +33,31 @@ class Trader extends EventEmitter{
         this.retry = 0
         await this.syncBalances()
         await this.midmarket_price()
-        this.keypress()
         // this.log.get('balance')
         //         .push(this.balances.base)
         //         .write()
     }
 
-    keypress() {
-        process.stdin.on('keypress', (str, key) => {
-            if (key.ctrl && key.name === 'c') {
-                process.exit()
-            }
-            if (key.ctrl && key.name === 's') {
-                if(!this.isTrading || this.isBuying || this.isSelling) {return}
-                console.log('Panic selling!!')
-                this.sell()
-            } else {
-                console.log(`You pressed the "${str}" key`)
-            }
-          })
-    }
+    // keypress() {
+    //     process.stdin.on('keypress', (str, key) => {
+    //         if (key.ctrl && key.name === 'c') {
+    //             process.exit()
+    //         }
+    //         if (key.ctrl && key.name === 's') {
+    //             if(!this.isTrading || this.isBuying || this.isSelling) {return}
+    //             console.log('Panic selling!!')
+    //             this.sell()
+    //         } else {
+    //             console.log(`You pressed the "${str}" key`)
+    //         }
+    //     })
+    // }
 
     isLastTradeOpen() {
         const last = this.log.get('trades').last().value()
         if(!last) {return false}
         if(last.state === 'closed') {
+            this.lastPair = last.pair
             console.log('Last trade closed!')
             return false
         } else {
@@ -73,7 +74,7 @@ class Trader extends EventEmitter{
         this.product = opts.pair
         opts.callback = this.executeStrategy.bind(this)
         if(this.isTrading) { return false }
-        if(this.product === 'BNBBTC'){ return false }
+        if(this.product === 'BNBBTC'){ return false } //don't trade on BNBBTC, cause I use it for fees
 
         const timer = new continuous(opts)
         timer.on('stopped', () => {
@@ -162,10 +163,11 @@ class Trader extends EventEmitter{
     }
 
     async sell(opts) {
+        //Needs some refactoring on price and type
         opts = opts || {}
         await this.syncBalances()
         await this.midmarket_price()
-        let market = opts.type === 'MARKET' ? true : false
+        let market = opts.type === 'MARKET'
         let price = this.roundToNearest(market ? this.lastPrice : opts.price ? opts.price : this.bestPrice, this.tickSize)
         let qty = this.roundToNearest(this.balances.asset, this.minQty)
         return this.addOrder({
@@ -203,7 +205,7 @@ class Trader extends EventEmitter{
                         .write()
                     return false
                 }
-                this.buyPrice = result.price
+                if(result.side === 'BUY'){ this.buyPrice = result.price }
                 /*if(result.status === 'FILLED'){
                     this.retry = 0
                     await this.syncBalances()
@@ -267,7 +269,7 @@ class Trader extends EventEmitter{
             buying: ${this.isBuying}
             selling: ${this.isSelling}`
             this.emit('traderCheckOrder', msg)
-            console.log(msg)
+            
 
             if(canceledManually) { return false }
 
@@ -292,8 +294,10 @@ class Trader extends EventEmitter{
                             state: 'closed'
                         })
                         .write()
+                    console.log(msg)
                     return this.stopTrading()
-                } else {
+                } 
+                if(data.side === 'BUY') {
                     this.isBuying = false
                     this.buyPrice = data.price
                     await this.syncBalances()
@@ -307,6 +311,7 @@ class Trader extends EventEmitter{
                             state: 'opened'                       
                         })
                         .write()
+                    console.log(msg)
                 }
                 return true
             }
@@ -320,9 +325,13 @@ class Trader extends EventEmitter{
                     this.partial = true
                     return setTimeout(() => this.checkOrder(this.order), 60000)
                 }
-                if(this.retry > 3){
+                if(this.retry > 3 && data.side === 'BUY'){
                     return this.cancelOrder(this.order)
-                        .then(() => data.side === 'BUY' ? this.buy({market: true}) : this.sell({type: 'LIMIT'}))
+                        .then(() => this.buy({market: true}))
+                }
+                if(this.retry > 10 && data.side === 'SELL'){
+                    return this.cancelOrder(this.order)
+                        .then(() => this.sell({type: 'MARKET'}))
                 }
                 return setTimeout(() => this.checkOrder(this.order), 60000)
             }

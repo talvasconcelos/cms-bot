@@ -3,10 +3,10 @@ const Trader = require('../trader')
 class Bot extends Trader {
     constructor(options) {
         super(options)
-        this.TP = 1.3
-        this._TP_p = 1.02
-        this._SL_p = 1.015
-        this._TRAIL_p = 1.005
+        this.TP = 1.3 //max take profit %
+        this._TP_p = 1.02 //partial % for setting take profit
+        this._SL_p = 1.015 //stop limit
+        this._TRAIL_p = 1.005 //trailing stop
         this.targetPrice = null
         this.stopLoss = null
         this.persistence = 0

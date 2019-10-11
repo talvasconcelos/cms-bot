@@ -3,10 +3,10 @@ const Trader = require('../trader')
 class Bot extends Trader {
     constructor(options) {
         super(options)
-        this.TP = 1.05
-        this._TP_p = 1.025
-        this._SL_p = 1.025
-        this._TRAIL_p = 1.005
+        // this.TP = 1.05
+        // this._TP_p = 1.025
+        // this._SL_p = 1.025
+        // this._TRAIL_p = 1.005
         this.targetPrice = null
         this.stopLoss = null
         this.persistence = 0
@@ -46,6 +46,9 @@ class Bot extends Trader {
     }
 
     checkPrices() {
+        if(isNaN(this.lastPrice / this.buyPrice)){
+            return this.initPrices()
+        }
         if(this.isSelling && !this.partial && this.lastPrice > this.sellPrice) {
             return this.cancelOrder(this.order)
         }
@@ -73,16 +76,17 @@ class Bot extends Trader {
         //     console.log('Stop Loss trigered. Selling!')
         //     return this.sell()
         // }
-        if(this.lastPrice < this.sellPrice) {
-            if(this.persistence <= 2) {
+        if(this.stopLoss < this.sellPrice && this.lastPrice < this.sellPrice && !this.isSelling) {
+            if(this.persistence < 3) {
                 this.persistence++
                 console.log(`Sell price triggered, persistence activated: ${this.persistence}`)
                 this.emit('traderPersistenceTrigger', this.persistence)
                 return 
             }
-            console.log('Sell price trigered. Selling!')
-            this.persistence = 0            
-            return this.sell({type: 'LIMIT', price: this.sellPrice})
+            console.log('Sell price trigered. Selling!')                        
+            this.sell({type: 'LIMIT', price: this.sellPrice})
+            this.persistence = 0
+            return 
         }
         this.persistence > 0 ? this.persistence = 0 : null
         return
