@@ -60,6 +60,9 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
 
 let bot = null
 
+telegramReport()
+keypress()
+
 function telegramReport() {
     if (!config.telegram || !slimbot) {
         return
@@ -271,9 +274,6 @@ async function startTrader(data, telegramAction = false) {
     }
     return bot
 }
-
-telegramReport()
-keypress()
 
 process.on('exit', async () => {
     console.log('Stopping Trader Bot')
