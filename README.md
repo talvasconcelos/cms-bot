@@ -37,10 +37,18 @@ In the console, you can trigger a panic sell by hitting the "s" key. On Telegram
 Choose a strategy from the *strategies* folder or create one for your trading style.
 
 ## Contributions 
-I'll 
+If you want to contribute to the project or fix something please be free to send a PR. Or just flag an issue. 
 
 ## Donate
 I'll take donations in BTC only at:
 
 bc1qgmcx92mx60kglywavrdnu0hlvh6q3v7vxz5aqv
+
+## Authors
+
+* **Tiago Vasconcelos** - *Initial work* - [talvasconcelos](https://github.com/talvasconcelos)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
