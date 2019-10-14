@@ -58,10 +58,11 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
     onerror: e => console.log('Error:')
 })
 
-let bot = null
-
-telegramReport()
-keypress()
+let bot = new Trader({
+    test: false,
+    client,
+    websocket
+})
 
 function telegramReport() {
     if (!config.telegram || !slimbot) {
@@ -100,14 +101,21 @@ function telegramReport() {
     })
 
     
-    bot && bot.on('tradeStart', () => {
+    bot.on('tradeStart', () => {
         let msg = `Buying ${bot.asset}.`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot && bot.on('tradeInfo', () => {
+    bot.on('tradeResume', () => {
+        let msg = `Resuming ${bot.asset} trade.`
+        slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+    })
+
+    bot.on('tradeInfo', () => {
         let pct = (bot.lastPrice / bot.buyPrice) - 1
         pct *= 100
         let msg = `*${bot.product}*
@@ -122,27 +130,27 @@ function telegramReport() {
         }).catch(console.error)
     })
 
-    bot && bot.on('tradeInfoStop', () => {
+    bot.on('tradeInfoStop', () => {
         let msg = `${bot.asset} trade ended!`
+        return slimbot.sendMessage(ID, msg, {
+            parse_mode: 'Markdown'
+        }).catch(console.error)
+    })
+
+    bot.on('traderCheckOrder', (msg) => {
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot && bot.on('traderCheckOrder', (msg) => {
-        slimbot.sendMessage(ID, msg, {
-            parse_mode: 'Markdown'
-        }).catch(console.error)
-    })
-
-    bot && bot.on('traderPersistenceTrigger', (count) => {
+    bot.on('traderPersistenceTrigger', (count) => {
         let msg = `Sell price triggered, persistence activated: ${count}!`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot && bot.on('priceUpdate', (price) => {
+    bot.on('priceUpdate', (price) => {
         let upPct = (price / bot.buyPrice) - 1
         upPct *= 100
         let msg = `Target price for ${bot.asset} updated: ${price.toFixed(8)}. New target ${upPct.toFixed(2)}%`
@@ -151,28 +159,29 @@ function telegramReport() {
         }).catch(console.error)
     })
 
-    bot && bot.on('traderSold', (price) => {
+    bot.on('traderSold', (price) => {
         let msg = `Sold ${bot.asset} for ${price}!`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
-        bot = null
+        // bot = null
     })
 
-    bot && bot.on('filledOrder', (price) => {
+    bot.on('filledOrder', (price) => {
         let msg = `Bought ${bot.asset} for ${price}!`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot && bot.on('traderEnded', (restart) => {
+    bot.on('traderEnded', (restart) => {
         slimbot.sendMessage(ID, `Trader ended`, {
             parse_mode: 'Markdown'
         }).catch(console.error)
         if (!restart) {
-            startTrader(CACHE)
+            return startTrader(CACHE)
         }
+        return
     })
 }
 
@@ -180,18 +189,16 @@ function keypress() {
     return process.stdin.on('keypress', (str, key) => {
         if (key.ctrl && key.name === 'c') {
             process.exit()
-        }
-        if(bot){
-            if (key.ctrl && key.name === 's') {
-                if (!bot.isTrading || bot.isBuying || bot.isSelling) {
-                    console.log('Bot is not trading!')
-                } else {
-                    console.log('Panic selling!!')
-                    bot.sell()
-                }
+        }        
+        if (key.ctrl && key.name === 's') {
+            if (!bot.isTrading || bot.isBuying || bot.isSelling) {
+                console.log('Bot is not trading!')
             } else {
-                console.log(`You pressed the "${str}" key`)
+                console.log('Panic selling!!')
+                bot.sell()
             }
+        } else {
+            console.log(`You pressed the "${str}" key`)
         }
     })
 }
@@ -268,8 +275,11 @@ async function startTrader(data, telegramAction = false) {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
         }
     }
-    return bot
+    return telegramReport()
 }
+
+// telegramReport()
+keypress()
 
 process.on('exit', async () => {
     console.log('Stopping Trader Bot')

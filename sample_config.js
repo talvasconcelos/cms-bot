@@ -13,7 +13,7 @@ config.MAX_BALANCE = 0 // in %, 0 to disable ex: 50, use only 50% off account ba
 
 config.strategy = 'microtrades'
 
-config.interval = 60000 //bot update in milliseconds
+config.interval = 60000 //bot console update in milliseconds (seconds * 1000)
 
 config.telegram = false 
 config.telegramAPI = ''

@@ -104,6 +104,9 @@ class Trader extends EventEmitter{
                 await this.stopTrading()
                 return false
             }
+        } 
+        if(this.isResuming) {
+            this.emit('tradeResume')
         }
         this.websocketPrice()
         timer.start()
@@ -327,7 +330,7 @@ class Trader extends EventEmitter{
                 }
                 if(this.retry > 3 && data.side === 'BUY'){
                     return this.cancelOrder(this.order)
-                        .then(() => this.buy({market: true}))
+                        // .then(() => this.buy({market: true}))
                 }
                 if(this.retry > 10 && data.side === 'SELL'){
                     return this.cancelOrder(this.order)
