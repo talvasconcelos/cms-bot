@@ -58,10 +58,16 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
     onerror: e => console.log('Error:')
 })
 
-let bot = new Trader({
+const bot = new Trader({
     test: false,
     client,
-    websocket
+    websocket,
+    base: config.currency,
+    TP: (config.TAKE_PROFIT / 100) + 1,
+    TP_p: (config.PARTIAL_TP / 100) + 1,
+    SL: (config.STOP_LIMIT / 100) + 1,
+    TRAIL: (config.TRAILING_SL / 100) + 1,
+    maxBalance: config.MAX_BALANCE
 })
 
 function telegramReport() {
@@ -69,6 +75,7 @@ function telegramReport() {
         return
     }
     const ID = config.telegramUserID
+    // TELEGRAM_REPORT = true
     slimbot.on('message', msg => {
         const action = msg.text.split()
         switch (true) {
@@ -132,7 +139,7 @@ function telegramReport() {
 
     bot.on('tradeInfoStop', () => {
         let msg = `${bot.asset} trade ended!`
-        return slimbot.sendMessage(ID, msg, {
+        slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
@@ -179,16 +186,29 @@ function telegramReport() {
             parse_mode: 'Markdown'
         }).catch(console.error)
         if (!restart) {
-            return startTrader(CACHE)
+            startTrader(CACHE)
         }
-        return
     })
+}
+
+async function close() {
+    console.log('Stopping Trader Bot')
+    CACHE = null
+    if (bot) {
+        await bot.stopTrading({
+            cancel: (bot.isBuying || bot.isSelling) ? true : false,
+            userStop: true
+        })
+    }
+    await cmsWS.close()
+    return process.exit(0)
 }
 
 function keypress() {
     return process.stdin.on('keypress', (str, key) => {
         if (key.ctrl && key.name === 'c') {
-            process.exit()
+            // process.exit()
+            close()
         }        
         if (key.ctrl && key.name === 's') {
             if (!bot.isTrading || bot.isBuying || bot.isSelling) {
@@ -209,20 +229,6 @@ async function startTrader(data, telegramAction = false) {
         return
     }
     const regex = RegExp(/(BTC)$/g)
-
-    if (!telegramAction) {
-        bot = new Trader({
-            test: false,
-            client,
-            base: config.currency,
-            websocket,
-            TP: (config.TAKE_PROFIT / 100) + 1,
-            TP_p: (config.PARTIAL_TP / 100) + 1,
-            SL: (config.STOP_LIMIT / 100) + 1,
-            TRAIL: (config.TRAILING_SL / 100) + 1,
-            maxBalance: config.MAX_BALANCE
-        })
-    }
 
     await bot.isLastTradeOpen()
     if (bot.isResuming) {
@@ -275,21 +281,21 @@ async function startTrader(data, telegramAction = false) {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
         }
     }
-    return telegramReport()
+    return
 }
 
-// telegramReport()
+telegramReport()
 keypress()
 
-process.on('exit', async () => {
-    console.log('Stopping Trader Bot')
-    CACHE = null
-    if (bot) {
-        await bot.stopTrading({
-            cancel: (bot.isBuying || bot.isSelling) ? true : false,
-            userStop: true
-        })
-    }
-    await cmsWS.close()
-    process.exit(0)
-})
+// process.on('exit', async () => {
+//     console.log('Stopping Trader Bot')
+//     CACHE = null
+//     if (bot) {
+//         await bot.stopTrading({
+//             cancel: (bot.isBuying || bot.isSelling) ? true : false,
+//             userStop: true
+//         })
+//     }
+//     await cmsWS.close()
+//     process.exit(0)
+// })

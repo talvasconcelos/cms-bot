@@ -22,6 +22,18 @@ class Trader extends EventEmitter{
         // this.keypress()
     }
 
+    reset(){
+        this.product = null
+        this.buyPrice = null
+        this.sellPrice = null
+        this.isTrading = false
+        this.isBuying = false
+        this.isSelling = false
+        this.support = null
+        this.initialPrices = true
+        this.persistence = 0
+    }
+
     async initTrader() {
         const market = await this.client.exchangeInfo().then(info => {
             return info.symbols.find(m => m.symbol === this.product.toUpperCase())
@@ -37,21 +49,6 @@ class Trader extends EventEmitter{
         //         .push(this.balances.base)
         //         .write()
     }
-
-    // keypress() {
-    //     process.stdin.on('keypress', (str, key) => {
-    //         if (key.ctrl && key.name === 'c') {
-    //             process.exit()
-    //         }
-    //         if (key.ctrl && key.name === 's') {
-    //             if(!this.isTrading || this.isBuying || this.isSelling) {return}
-    //             console.log('Panic selling!!')
-    //             this.sell()
-    //         } else {
-    //             console.log(`You pressed the "${str}" key`)
-    //         }
-    //     })
-    // }
 
     isLastTradeOpen() {
         const last = this.log.get('trades').last().value()
@@ -117,10 +114,11 @@ class Trader extends EventEmitter{
         if(!this.isTrading) { return }
         opts = opts || { cancel: false }
         this.userStop = opts.userStop ? true : false
+        this.emit('traderEnded', this.userStop)
         const cancel = opts.cancel ? this.cancelOrder(this.order) : Promise.resolve()
         return cancel.then(() => {
             this.timer.stop()
-            this.emit('traderEnded', this.userStop)
+            this.reset()
             return
         })
     }

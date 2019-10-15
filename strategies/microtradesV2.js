@@ -39,12 +39,10 @@ class Bot extends Trader {
         }
         this.sellPrice = this.stopLoss
         this.initialPrices = false
+        this.emit('tradeInfo')
     }
 
     checkPrices() {
-        if(isNaN(this.lastPrice / this.buyPrice)){
-            return this.initPrices()
-        }
         if(this.isSelling && !this.partial && this.lastPrice > this.sellPrice) {
             return this.cancelOrder(this.order)
         }
