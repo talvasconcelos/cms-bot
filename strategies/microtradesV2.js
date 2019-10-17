@@ -55,13 +55,16 @@ class Bot extends Trader {
 
         if(pctOk){
             let sellP = Math.max((this.targetPrice / this._TRAIL_p), this.stopLoss + (this.tickSize * 5))
+            sellP = sellP > this.lastPrice ? (this.buyPrice * this._TP_p) * this._TRAIL_p : sellP
             this.sellPrice = this.roundToNearest(sellP, this.tickSize)
-            this.N = 10
+            if(!this.N === 3){
+                this.N = 10
+            }
         }
 
         if(this.lastPrice >= this.targetPrice) {
             this.targetPrice = this.roundToNearest((this.targetPrice * this._TP_p), this.tickSize)
-            this.sellPrice = pctOk ? this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize) : this.stopLoss
+            // this.sellPrice = pctOk ? this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize) : this.stopLoss
             console.log('Target price updated:', this.targetPrice, pctOk, (this.lastPrice / this.buyPrice), (this._TP_p + this._TRAIL_p) - 1)
             this.emit('priceUpdate', this.targetPrice)
             return
