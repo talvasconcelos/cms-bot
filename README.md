@@ -44,11 +44,10 @@ I'll take donations in BTC only at:
 
 bc1qgmcx92mx60kglywavrdnu0hlvh6q3v7vxz5aqv
 
-Or tip me with Bottle:
-<div>
-<div id="bottle-payment-button" data-corner="25px" data-fill="filled" data-size="large" data-color="#40a79a" data-textColor="#FFFFFF" data-service="bottle" data-name="Tiago%20Vasconcelos" data-avatar="https://cdn.bottle.li/userimg/43faa844592a5791523454e6f9e841bef4748e1c81ba792eaa7fc23dfb368e0e.jpg" data-username="m9S2Bcyq2PS197yFJd7e5MfriEXtrBDANXiueowunjyB" data-text="tip" data-url="https://pay.bottle.li/send/social/" ></div>
-<script src="https://cdn.bottle.li/button/bb.min.js"></script>
-</div>
+Or tip me wit Bottle:
+
+https://btl.to/gh/talvasconcelos
+
 
 ## Authors
 
