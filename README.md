@@ -34,7 +34,7 @@ While running, the bot will log to the console and if configured, to Telegram.
 In the console, you can trigger a panic sell by hitting the "s" key. On Telegram enter *"/help"* to see a list of possible commands.
 
 ## Strategies
-Choose a strategy from the *strategies* folder or create one for your trading style.
+Choose a strategy from the *strategies* folder or create one for your trading style. You can use the template file.
 
 ## Contributions 
 If you want to contribute to the project or fix something please be free to send a PR. Or just flag an issue. 
