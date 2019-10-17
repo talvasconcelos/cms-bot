@@ -32,6 +32,13 @@ class Trader extends EventEmitter{
         this.support = null
         this.initialPrices = true
         this.persistence = 0
+        this.targetPrice = null
+        this.stopLoss = null
+        this.persistence = 0
+        this.initialPrices = true
+        this.supportData = []
+        this.support = null
+        this.N = 40
     }
 
     async initTrader() {
@@ -76,6 +83,7 @@ class Trader extends EventEmitter{
         const timer = new continuous(opts)
         timer.on('stopped', () => {
             this.isTrading = false
+            this.reset()
             this.telegramInfoStop()
             console.log('Trader end.')
             if (!this.userStop) {
@@ -118,7 +126,6 @@ class Trader extends EventEmitter{
         const cancel = opts.cancel ? this.cancelOrder(this.order) : Promise.resolve()
         return cancel.then(() => {
             this.timer.stop()
-            this.reset()
             return
         })
     }
