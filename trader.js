@@ -83,7 +83,6 @@ class Trader extends EventEmitter{
         const timer = new continuous(opts)
         timer.on('stopped', () => {
             this.isTrading = false
-            this.reset()
             this.telegramInfoStop()
             console.log('Trader end.')
             if (!this.userStop) {
@@ -125,6 +124,7 @@ class Trader extends EventEmitter{
         this.emit('traderEnded', this.userStop)
         const cancel = opts.cancel ? this.cancelOrder(this.order) : Promise.resolve()
         return cancel.then(() => {
+            this.reset()
             this.timer.stop()
             return
         })

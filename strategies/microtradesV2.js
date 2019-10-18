@@ -120,7 +120,7 @@ class Bot extends Trader {
                     }
                     this.sellPrice = this.stopLoss
                     if (+data.kline.close < this.stopLoss) {
-                        console.log('Stop Loss trigered. Selling!')
+                        console.log('Stop Loss trigered. Selling!', +data.kline.close, this.stopLoss)
                         this.sell()
                     }
                     //   console.log(EMA(support), data.kline.high)
