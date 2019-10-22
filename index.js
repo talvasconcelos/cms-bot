@@ -58,23 +58,21 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
     onerror: e => console.log('Error:')
 })
 
-const bot = new Trader({
-    test: false,
-    client,
-    websocket,
-    base: config.currency,
-    TP: (config.TAKE_PROFIT / 100) + 1,
-    TP_p: (config.PARTIAL_TP / 100) + 1,
-    SL: (config.STOP_LIMIT / 100) + 1,
-    TRAIL: (config.TRAILING_SL / 100) + 1,
-    maxBalance: config.MAX_BALANCE
-})
+let bot = null
+let report = null
 
-function telegramReport() {
+function telegramReport(trader) {
     if (!config.telegram || !slimbot) {
         return
     }
+    if(!trader) {
+        return setTimeout(() => {
+            console.log('No Bot yet, retrying in 1s!')
+            return telegramReport(bot)
+        }, 1000)
+    }
     const ID = config.telegramUserID
+    console.debug('Reports started!')
     // TELEGRAM_REPORT = true
     slimbot.on('message', msg => {
         const action = msg.text.split()
@@ -84,21 +82,21 @@ function telegramReport() {
                     parse_mode: 'Markdown'
                 })
                 break
-            case bot && action[0] === '/sell':
-                slimbot.sendMessage(ID, `Sell message received! Selling ${bot.asset} for ${bot.lastPrice}.`)
-                bot.sell({
-                    price: bot.lastPrice
+            case trader && action[0] === '/sell':
+                slimbot.sendMessage(ID, `Sell message received! Selling ${trader.asset} for ${trader.lastPrice}.`)
+                trader.sell({
+                    price: trader.lastPrice
                 })
                 break
-            case bot && action[0] === '/pause':
+            case trader && action[0] === '/pause':
                 slimbot.sendMessage(ID, `Stopping trader! To resume write "resume".`)
-                bot.stopTrading({
-                    cancel: (bot.isBuying || bot.isSelling) ? true : false,
+                trader.stopTrading({
+                    cancel: (trader.isBuying || trader.isSelling) ? true : false,
                     userStop: true
                 })
                 break
-            case bot && action[0] === '/resume':
-                slimbot.sendMessage(ID, `Resuming trader on ${bot.asset}!`)
+            case trader && action[0] === '/resume':
+                slimbot.sendMessage(ID, `Resuming trader on ${trader.asset}!`)
                 startTrader(null, true)
                 break
             default:
@@ -108,80 +106,80 @@ function telegramReport() {
     })
 
     
-    bot.on('tradeStart', () => {
-        let msg = `Buying ${bot.asset}.`
+    trader.on('tradeStart', () => {
+        let msg = `Buying ${trader.asset}.`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot.on('tradeResume', () => {
-        let msg = `Resuming ${bot.asset} trade.`
+    trader.on('tradeResume', () => {
+        let msg = `Resuming ${trader.asset} trade.`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot.on('tradeInfo', () => {
-        let pct = (bot.lastPrice / bot.buyPrice) - 1
+    trader.on('tradeInfo', () => {
+        let pct = (trader.lastPrice / trader.buyPrice) - 1
         pct *= 100
-        let msg = `*${bot.product}*
+        let msg = `*${trader.product}*
     *${pct < 0 ? 'Down' : 'Up'}:* ${pct.toFixed(2)}%
-    *Last Price:* ${bot.lastPrice}
-    *Buy Price:* ${bot.buyPrice}
-    *Sell Price:* ${bot.sellPrice}
-    *Stop Loss:* ${bot.stopLoss}
-    *Target Price:* ${bot.targetPrice}`
+    *Last Price:* ${trader.lastPrice}
+    *Buy Price:* ${trader.buyPrice}
+    *Sell Price:* ${trader.sellPrice}
+    *Stop Loss:* ${trader.stopLoss}
+    *Target Price:* ${trader.targetPrice}`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot.on('tradeInfoStop', () => {
-        let msg = `${bot.asset} trade ended!`
+    trader.on('tradeInfoStop', () => {
+        let msg = `${trader.asset} trade ended!`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot.on('traderCheckOrder', (msg) => {
+    trader.on('traderCheckOrder', (msg) => {
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot.on('traderPersistenceTrigger', (count) => {
+    trader.on('traderPersistenceTrigger', (count) => {
         let msg = `Sell price triggered, persistence activated: ${count}!`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot.on('priceUpdate', (price) => {
-        let upPct = (price / bot.buyPrice) - 1
+    trader.on('priceUpdate', (price) => {
+        let upPct = (price / trader.buyPrice) - 1
         upPct *= 100
-        let msg = `Target price for ${bot.asset} updated: ${price.toFixed(8)}. New target ${upPct.toFixed(2)}%`
+        let msg = `Target price for ${trader.asset} updated: ${price.toFixed(8)}. New target ${upPct.toFixed(2)}%`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot.on('traderSold', (price) => {
-        let msg = `Sold ${bot.asset} for ${price}!`
+    trader.on('traderSold', (price) => {
+        let msg = `Sold ${trader.asset} for ${price}!`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
-        // bot = null
+        // trader = null
     })
 
-    bot.on('filledOrder', (price) => {
-        let msg = `Bought ${bot.asset} for ${price}!`
+    trader.on('filledOrder', (price) => {
+        let msg = `Bought ${trader.asset} for ${price}!`
         slimbot.sendMessage(ID, msg, {
             parse_mode: 'Markdown'
         }).catch(console.error)
     })
 
-    bot.on('traderEnded', (restart) => {
+    trader.on('traderEnded', (restart) => {
         slimbot.sendMessage(ID, `Trader ended`, {
             parse_mode: 'Markdown'
         }).catch(console.error)
@@ -230,12 +228,26 @@ async function startTrader(data, telegramAction = false) {
     }
     const regex = RegExp(/(BTC)$/g)
 
+    bot = new Trader({
+        test: false,
+        client,
+        websocket,
+        base: config.currency,
+        TP: (config.TAKE_PROFIT / 100) + 1,
+        TP_p: (config.PARTIAL_TP / 100) + 1,
+        SL: (config.STOP_LIMIT / 100) + 1,
+        TRAIL: (config.TRAILING_SL / 100) + 1,
+        maxBalance: config.MAX_BALANCE
+    })
+
     await bot.isLastTradeOpen()
     if (bot.isResuming) {
         bot.startTrading({
             pair: bot.product,
             time: config.interval
         }).catch(console.error)
+        report = telegramReport(bot)
+        report
     }
     if (!bot.isResuming && data && data.hasOwnProperty('to') && data.to == 'trader') {
         // console.log(data)
@@ -277,6 +289,8 @@ async function startTrader(data, telegramAction = false) {
                     break
                 }
             }
+        report = telegramReport(bot)
+        report()
         } else {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
         }
@@ -284,7 +298,7 @@ async function startTrader(data, telegramAction = false) {
     return
 }
 
-telegramReport()
+// telegramReport(bot)
 keypress()
 
 // process.on('exit', async () => {

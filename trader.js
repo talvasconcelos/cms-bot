@@ -52,6 +52,7 @@ class Trader extends EventEmitter{
         this.retry = 0
         await this.syncBalances()
         await this.midmarket_price()
+        this.websocketPrice()
         // this.log.get('balance')
         //         .push(this.balances.base)
         //         .write()
@@ -112,7 +113,6 @@ class Trader extends EventEmitter{
         if(this.isResuming) {
             this.emit('tradeResume')
         }
-        this.websocketPrice()
         timer.start()
         return true
     }
@@ -124,7 +124,7 @@ class Trader extends EventEmitter{
         this.emit('traderEnded', this.userStop)
         const cancel = opts.cancel ? this.cancelOrder(this.order) : Promise.resolve()
         return cancel.then(() => {
-            this.reset()
+            // this.reset()
             this.timer.stop()
             return
         })
