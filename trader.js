@@ -175,8 +175,7 @@ class Trader extends EventEmitter{
         opts = opts || {}
         await this.syncBalances()
         await this.midmarket_price()
-        let market = opts.type === 'MARKET'
-        let price = this.roundToNearest(market ? this.lastPrice : opts.price ? opts.price : this.bestPrice, this.tickSize)
+        let price = this.roundToNearest(opts.price ? opts.price : this.bestPrice, this.tickSize)
         let qty = this.roundToNearest(this.balances.asset, this.minQty)
         return this.addOrder({
             side: 'SELL',
@@ -334,12 +333,11 @@ class Trader extends EventEmitter{
                     return setTimeout(() => this.checkOrder(this.order), 60000)
                 }
                 if(this.retry > 3 && data.side === 'BUY'){
-                    return this.cancelOrder(this.order)
-                        // .then(() => this.buy({market: true}))
+                    return this.stopTrading({cancel: true})
                 }
-                if(this.retry > 10 && data.side === 'SELL'){
+                if(this.retry > 5 && data.side === 'SELL'){
                     return this.cancelOrder(this.order)
-                        .then(() => this.sell({type: 'MARKET'}))
+                        .then(() => this.sell(this.retry > 10 ? {type: 'MARKET'} : {}))
                 }
                 return setTimeout(() => this.checkOrder(this.order), 60000)
             }

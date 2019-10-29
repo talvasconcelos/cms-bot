@@ -47,15 +47,16 @@ class Bot extends Trader {
             return this.cancelOrder(this.order)
         }
         let pctOk = (this.lastPrice / this.buyPrice) > (this._TP_p + this._TRAIL_p) - 1
+        
         if(this.lastPrice >= this.buyPrice * this.TP) {
             console.log('Top target achieved.')
             this.N = 3
             // return this.sell()
         }
 
-        if(pctOk){
+        if(this.pctOk){
             let sellP = Math.max((this.targetPrice / this._TRAIL_p), this.stopLoss + (this.tickSize * 5))
-            sellP = sellP > this.lastPrice ? (this.buyPrice * this._TP_p) * this._TRAIL_p : sellP
+            sellP = sellP > this.lastPrice ? (this.buyPrice * this._TP_p) * this._TRAIL_p : this.sellPrice
             this.sellPrice = this.roundToNearest(sellP, this.tickSize)
             if(!this.N === 3){
                 this.N = 10
@@ -69,10 +70,7 @@ class Bot extends Trader {
             this.emit('priceUpdate', this.targetPrice)
             return
         }
-        // if(this.lastPrice <= this.stopLoss) {
-        //     console.log('Stop Loss trigered. Selling!')
-        //     return this.sell()
-        // }
+        
         if(this.stopLoss < this.sellPrice && this.lastPrice < this.sellPrice && !this.isSelling) {
             if(this.persistence < 3) {
                 this.persistence++
