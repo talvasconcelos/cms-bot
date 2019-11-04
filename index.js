@@ -50,6 +50,7 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
         if (!data.hasOwnProperty('to')) {
             return
         }
+        CACHE = data
         return startTrader(data)
     },
     onreconnect: e => console.log('Reconnecting...'),
@@ -58,7 +59,17 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
     onerror: e => console.log('Error:')
 })
 
-let bot = false
+let bot = new Trader({
+    test: false,
+    client,
+    websocket,
+    base: config.currency,
+    TP: (config.TAKE_PROFIT / 100) + 1,
+    TP_p: (config.PARTIAL_TP / 100) + 1,
+    SL: (config.STOP_LIMIT / 100) + 1,
+    TRAIL: (config.TRAILING_SL / 100) + 1,
+    maxBalance: config.MAX_BALANCE
+})
 
 function telegramReport() {
     if (!config.telegram || !slimbot) {
@@ -79,10 +90,16 @@ function telegramReport() {
                     parse_mode: 'Markdown'
                 })
                 break
+            case action[0] === '/stop':
+                slimbot.sendMessage(ID, 'Stopping Trader!', {
+                    parse_mode: 'Markdown'
+                })
+                close()
+                break
             case trader && action[0] === '/sell':
                 slimbot.sendMessage(ID, `Sell message received! Selling ${bot.asset} for ${bot.lastPrice}.`)
                 bot.sell({
-                    price: bot.lastPrice
+                    price: action[1] || bot.lastPrice
                 })
                 break
             case trader && action[0] === '/pause':
@@ -183,7 +200,6 @@ function telegramReport() {
         if (!restart) {
             startTrader(CACHE)
         }
-        return
     })
 }
 
@@ -201,6 +217,9 @@ async function close() {
 }
 
 function keypress() {
+    if (!bot) {
+        return setTimeout(keypress, 3000)
+    }
     return process.stdin.on('keypress', (str, key) => {
         if (key.ctrl && key.name === 'c') {
             // process.exit()
@@ -263,7 +282,6 @@ async function startTrader(data, telegramAction = false) {
             return
         }
         console.log(pair)
-        CACHE = pair
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
         if (diff < 15) { //if signal is more than 15 minutes, wait for next 
@@ -289,7 +307,7 @@ async function startTrader(data, telegramAction = false) {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
         }
     }
-    return
+    return bot
 }
 
 telegramReport()
