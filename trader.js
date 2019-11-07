@@ -52,7 +52,6 @@ class Trader extends EventEmitter{
         this.retry = 0
         await this.syncBalances()
         await this.midmarket_price()
-        this.websocketPrice()
         // this.log.get('balance')
         //         .push(this.balances.base)
         //         .write()
@@ -126,6 +125,7 @@ class Trader extends EventEmitter{
         return cancel.then(() => {
             // this.reset()
             this.timer.stop()
+            // this.reset()
             return
         })
     }
@@ -156,7 +156,7 @@ class Trader extends EventEmitter{
             console.error('Minimum order must be', this._minOrder + '.')
             return false
         }
-        if(price < 0.00000199){
+        if(price < 0.00000099){
             console.log('Price too low!')
             return false
         }
@@ -254,7 +254,7 @@ class Trader extends EventEmitter{
 
     checkOrder(order) {
         this.retry++
-        if(this.retry > 8 && this.isBuying) {
+        if(this.retry > 8 && this.isBuying && !this.partial) {
             return this.stopTrading({cancel: true})
         }
         return this.client.queryOrder({
@@ -433,6 +433,7 @@ class Trader extends EventEmitter{
         clearInterval(this.telegramInfo)
         this.telegramInfo = null
         this.emit('tradeInfoStop')
+        this.removeAllListeners()
     }
 }
 

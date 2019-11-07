@@ -20,18 +20,19 @@ class Bot extends Trader {
             return this.emaSupport()
         }
         if(!this.lastPrice || this.lastPrice === 'undefined'){
-            this.websocketPrice()
+            return
         }
         if(this.initialPrices){ this.initPrices() }
 
         this.checkPrices()
         this.outputTradeInfo()
-
+        
         return 
     }
 
     initPrices() {
         if(!this.support.length) {return}
+        this.websocketPrice()
         this.targetPrice = this.roundToNearest(this.buyPrice * this._TP_p, this.tickSize)
         this.stopLoss = this.roundToNearest(this.support[this.support.length - 1], this.tickSize)
         if(this.stopLoss > this.buyPrice){
