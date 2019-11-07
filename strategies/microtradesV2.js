@@ -20,7 +20,7 @@ class Bot extends Trader {
             return this.emaSupport()
         }
         if(!this.lastPrice || this.lastPrice === 'undefined'){
-            return
+            this.ticker().then(() => this.lastPrice = this.bid)
         }
         if(this.initialPrices){ this.initPrices() }
 
