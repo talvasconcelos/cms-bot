@@ -260,6 +260,7 @@ async function startTrader(data, telegramAction = false) {
             time: config.interval
         }).catch(console.error)
     }
+    if(!bot.isResuming && !data) {return}
     if (!bot.isResuming && data && data.hasOwnProperty('to') && data.to == 'trader') {
         // console.log(data)
         if (bot && bot.is_trading) {
@@ -308,5 +309,6 @@ async function startTrader(data, telegramAction = false) {
     return botReportTelegram(bot)
 }
 
+startTrader()
 keypress()
 telegramCommand()

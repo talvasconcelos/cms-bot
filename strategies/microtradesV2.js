@@ -10,6 +10,7 @@ class Bot extends Trader {
         this.supportData = []
         this.support = null
         this.N = 40
+        this.pctOk = false
         this.forcePriceUpdate(3600000)
     }
 
@@ -47,7 +48,9 @@ class Bot extends Trader {
         if(this.isSelling && !this.partial && this.lastPrice > this.sellPrice) {
             return this.cancelOrder(this.order)
         }
-        let pctOk = (this.lastPrice / this.buyPrice) > (this._TP_p + this._TRAIL_p) - 1
+        if(!this.pctOk){
+            this.pctOk = (this.lastPrice / this.buyPrice) > (this._TP_p + this._TRAIL_p) - 1
+        }
         
         if(this.lastPrice >= this.buyPrice * this.TP) {
             console.log('Top target achieved.')
