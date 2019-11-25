@@ -67,6 +67,7 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
         if (!data.hasOwnProperty('to')) {
             return
         }
+        CACHE = data
         return startTrader(data)
     },
     onreconnect: e => console.log('Reconnecting...'),
@@ -159,6 +160,7 @@ function botReportTelegram(traderBot) {
             parse_mode: 'Markdown'
         }).then(() => {
             if (!restart) {
+                console.log(CACHE)
                 startTrader(CACHE)
             }
         })
@@ -300,7 +302,6 @@ async function startTrader(data, telegramAction = false) {
             return
         }
         console.log(pair)
-        CACHE = pair
         let now = Date.now()
         let diff = new Date(now - data.timestamp).getMinutes()
         if (diff < 15) { //if signal is more than 15 minutes, wait for next 
@@ -314,10 +315,6 @@ async function startTrader(data, telegramAction = false) {
                         x = res
                         console.log(pair[i], res)
                     }).catch(console.error)
-                if (x) {
-                    CACHE.splice(i, 1)
-                    break
-                }
             }
         } else {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
