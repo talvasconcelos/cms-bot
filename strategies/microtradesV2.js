@@ -39,7 +39,7 @@ class Bot extends Trader {
         if(this.stopLoss > this.buyPrice){
             this.stopLoss = this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
         }
-        this.sellPrice = this.stopLoss
+        this.sellPrice = 0
         this.initialPrices = false
         this.emit('tradeInfo')
     }
@@ -68,15 +68,19 @@ class Bot extends Trader {
         }
 
         if(this.lastPrice >= this.targetPrice) {
+            let sellP = this.targetPrice / this._TRAIL_p
+            // sellP = sellP > this.lastPrice ? (this.buyPrice * this._TP_p) * this._TRAIL_p : sellP
+            this.sellPrice = this.pctOk ? this.roundToNearest(sellP, this.tickSize) : this.sellPrice
             this.targetPrice = this.roundToNearest((this.targetPrice * this._TP_p), this.tickSize)
-            // this.sellPrice = pctOk ? this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize) : this.stopLoss
-            console.log('Target price updated:', this.targetPrice, pctOk, (this.lastPrice / this.buyPrice), (this._TP_p + this._TRAIL_p) - 1)
+            // this.sellPrice = this.pctOk ? this.roundToNearest((this.targetPrice / this._TRAIL_p), this.tickSize) : this.stopLoss
+            console.log('Target price updated:', this.targetPrice, this.pctOk, (this.lastPrice / this.buyPrice), (this._TP_p + this._TRAIL_p) - 1)
             this.emit('priceUpdate', this.targetPrice)
+            this.emit('tradeInfo')
             return
         }
         
-        if(this.stopLoss < this.sellPrice && this.lastPrice < this.sellPrice && !this.isSelling) {
-            if(this.persistence < 3) {
+        if(this.lastPrice < this.sellPrice && !this.isSelling) {
+            if(this.persistence < 1) {
                 this.persistence++
                 console.log(`Sell price triggered, persistence activated: ${this.persistence}`)
                 this.emit('traderPersistenceTrigger', this.persistence)
@@ -111,8 +115,9 @@ class Bot extends Trader {
         .then(() => {
             this.support = this.ema(this.supportData, this.N)
             console.log('emaSupport', this.support.slice(-1), this.N)
-            this.websocket.onKline(this.product, '1h', (data) => {
+            const kline = this.websocket.onKline(this.product, '1h', (data) => {
                 if (data.kline.final) {
+                    // console.debug(data.kline)
                     this.supportData.shift()
                     this.supportData.push(this.hl2(data.kline.high, data.kline.low))
                     this.support = this.ema(this.supportData, this.N)
@@ -120,10 +125,11 @@ class Bot extends Trader {
                     if(this.stopLoss > this.buyPrice){
                         this.stopLoss = this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
                     }
-                    this.sellPrice = this.stopLoss
+                    // this.sellPrice = this.stopLoss
                     if (+data.kline.close < this.stopLoss) {
                         console.log('Stop Loss trigered. Selling!', +data.kline.close, this.stopLoss)
                         this.sell()
+                        kline.close()
                     }
                     //   console.log(EMA(support), data.kline.high)
                 }

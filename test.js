@@ -40,7 +40,7 @@ const EMA = (arr, n = 10) => {
   return emaArr
 }
 
-let websocket = new api.BinanceWS()
+const websocket = new api.BinanceWS()
 const hl2 = (h, l) => (+h + +l) / 2
 // const bot = new Trader({
 //   test: false,
@@ -59,12 +59,13 @@ console.log(support.length ? support.length : 'False')
 // .then(res => res.map(c => support.push(hl2(c.high, c.low))))
 // //.then(res => EMA(res))
 // // support.then(console.log)
-websocket.onKline('BNBBTC', '1m', (data) => {
+const x = websocket.onKline('BNBBTC', '1m', (data) => {
+  console.log(data.kline)
   if(data.kline.final){
     support.shift()
     support.push(hl2(data.kline.high, data.kline.low))
     console.log(EMA(support), data.kline.high)
-    this.close()
+    x.close()
   }
 })
 

@@ -156,7 +156,7 @@ class Trader extends EventEmitter{
             console.error('Minimum order must be', this._minOrder + '.')
             return false
         }
-        if(price < 0.00000199){
+        if(price < 0.00000099){
             console.log('Price too low!')
             return false
         }
@@ -255,6 +255,7 @@ class Trader extends EventEmitter{
     checkOrder(order) {
         this.retry++
         if(this.retry > 8 && this.isBuying && !this.partial) {
+            console.log('Not able to buy!')
             return this.stopTrading({cancel: true})
         }
         return this.client.queryOrder({
@@ -413,10 +414,9 @@ class Trader extends EventEmitter{
         .catch(console.error)
     }
 
-    websocketPrice() {
-        const feed = this.websocket
-        if(!feed || !this.product) { return }
-        feed.onAggTrade(this.product, msg => {
+    websocketPrice(close = false) {
+        if(!this.websocket || !this.product) { return }
+        const feed = this.websocket.onAggTrade(this.product, msg => {
             this.lastPrice = msg.price
         })
     }

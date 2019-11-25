@@ -19,12 +19,26 @@ const telegram = (apikey) => {
 }
 
 const helpMsg = `
-/help : display this list
+/help: display this list
+/info: shows the info for the trade
 /pause: pause the trader
 /resume: resume trader
 /stop: shutdown bot (this will cancel open order and close bot)
 /sell: make a limit sell order at the last price (if price not set, bot will try to sell at last price)
 `
+
+const infoMsg = (traderBot) => {
+    let pct = (traderBot.lastPrice / traderBot.buyPrice) - 1
+    pct *= 100
+    let msg = `*${traderBot.product}*
+    *${pct < 0 ? 'Down' : 'Up'}:* ${pct.toFixed(2)}%
+    *Last Price:* ${traderBot.lastPrice}
+    *Buy Price:* ${traderBot.buyPrice}
+    *Sell Price:* ${traderBot.sellPrice}
+    *Stop Loss:* ${traderBot.stopLoss}
+    *Target Price:* ${traderBot.targetPrice}`
+    return msg
+}
 
 const slimbot = config.telegram ? telegram(config.telegramAPI) : null
 
@@ -143,11 +157,12 @@ function botReportTelegram(traderBot) {
     traderBot.on('traderEnded', (restart) => {
         slimbot.sendMessage(ID, `Trader ended`, {
             parse_mode: 'Markdown'
-        }).catch(console.error)
-        if (!restart) {
-            startTrader(CACHE)
-        }
-        return
+        }).then(() => {
+            if (!restart) {
+                startTrader(CACHE)
+            }
+        })
+        .catch(console.error)
     })
 }
 
@@ -163,6 +178,11 @@ function telegramCommand() {
         switch (true) {
             case action[0] === '/help':
                 slimbot.sendMessage(ID, helpMsg, {
+                    parse_mode: 'Markdown'
+                })
+                break
+            case bot && action[0] === '/info':
+                slimbot.sendMessage(ID, infoMsg(bot), {
                     parse_mode: 'Markdown'
                 })
                 break
@@ -270,6 +290,7 @@ async function startTrader(data, telegramAction = false) {
         const pair = data.data.sort((a, b) => {
                 return b.prob - a.prob
             })
+            .filter(p => p.prob > 0.8)
             .filter(p => (regex).test(p.pair))
             .filter(p => p.pair !== bot.lastPair) // don't trade on last pair
         // console.log(pair)
@@ -285,10 +306,6 @@ async function startTrader(data, telegramAction = false) {
         if (diff < 15) { //if signal is more than 15 minutes, wait for next 
             let x = null
             for (let i = 0; i < pair.length; i++) {
-                if (pair.prob < 0.998) {
-                    break
-                }
-                // bot.reset()
                 await bot.startTrading({
                         pair: pair[i].pair,
                         time: config.interval
@@ -309,6 +326,6 @@ async function startTrader(data, telegramAction = false) {
     return botReportTelegram(bot)
 }
 
-startTrader()
+// startTrader()
 keypress()
 telegramCommand()
