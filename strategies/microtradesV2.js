@@ -50,6 +50,7 @@ class Bot extends Trader {
         }
         if(!this.pctOk){
             this.pctOk = (this.lastPrice / this.buyPrice) > (this._TP_p + this._TRAIL_p) - 1
+            this.pctOk && console.log('Minimum profit ok:', this.lastPrice / this.buyPrice, (this._TP_p + this._TRAIL_p) - 1)
         }
         
         if(this.lastPrice >= this.buyPrice * this.TP) {
@@ -59,9 +60,10 @@ class Bot extends Trader {
         }
 
         if(this.pctOk){
-            // let sellP = this.targetPrice / this._TRAIL_p
-            // sellP = sellP > this.lastPrice ? (this.buyPrice * this._TP_p) * this._TRAIL_p : sellP
-            // this.sellPrice = this.roundToNearest(sellP, this.tickSize)
+            if(!this.sellPriceIsSet){
+                this.sellPrice = this.roundToNearest(this.buyPrice * 1.015, this.tickSize)
+                this.sellPriceIsSet = true
+            }
             if(!this.N === 3){
                 this.N = 10
             }
@@ -87,7 +89,7 @@ class Bot extends Trader {
                 return 
             }
             console.log('Sell price trigered. Selling!')                        
-            this.sell({type: 'LIMIT', price: this.sellPrice})
+            this.sell({type: 'LIMIT', price: this.lastPrice})
             this.persistence = 0
             return 
         }

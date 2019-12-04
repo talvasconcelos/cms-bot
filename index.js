@@ -292,7 +292,7 @@ async function startTrader(data, telegramAction = false) {
         const pair = data.data.sort((a, b) => {
                 return b.prob - a.prob
             })
-            .filter(p => p.prob > 0.8)
+            .filter(p => p.prob > 0.99)
             .filter(p => (regex).test(p.pair))
             .filter(p => p.pair !== bot.lastPair) // don't trade on last pair
         // console.log(pair)
@@ -315,6 +315,7 @@ async function startTrader(data, telegramAction = false) {
                         x = res
                         console.log(pair[i], res)
                     }).catch(console.error)
+                if(x) {break}
             }
         } else {
             console.log(`Signal is outdated! Sent ${diff} minutes ago!`)
