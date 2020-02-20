@@ -156,7 +156,7 @@ class Trader extends EventEmitter{
             console.error('Minimum order must be', this._minOrder + '.')
             return false
         }
-        if(price < 0.00000199){
+        if(price < 0.00000999){
             console.log('Price too low!')
             return false
         }

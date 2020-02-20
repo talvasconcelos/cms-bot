@@ -35,12 +35,13 @@ class Bot extends Trader {
         if(!this.support.length) {return}
         this.websocketPrice()
         this.targetPrice = this.roundToNearest(this.buyPrice * this._TP_p, this.tickSize)
+        this.hardStopLoss = this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
+        this.emaStopLoss = this.roundToNearest(this.support[this.support.length - 1], this.tickSize)
         this.stopLoss = this.roundToNearest(this.support[this.support.length - 1], this.tickSize)
-        if(this.stopLoss > this.buyPrice){
-            this.stopLoss = this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
-        }
+        this.stopLoss = Math.min(this.hardStopLoss, this.emaStopLoss)
         this.sellPrice = 0
         this.initialPrices = false
+        console.log(this._SL_p, this.hardStopLoss)
         this.emit('tradeInfo')
     }
 
@@ -123,10 +124,9 @@ class Bot extends Trader {
                     this.supportData.shift()
                     this.supportData.push(this.hl2(data.kline.high, data.kline.low))
                     this.support = this.ema(this.supportData, this.N)
-                    this.stopLoss = this.roundToNearest(this.support[this.support.length - 1], this.tickSize)
-                    if(this.stopLoss > this.buyPrice){
-                        this.stopLoss = this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
-                    }
+                    
+                    //this.roundToNearest(this.buyPrice / this._SL_p, this.tickSize)
+                    
                     // this.sellPrice = this.stopLoss
                     if (+data.kline.close < this.stopLoss) {
                         console.log('Stop Loss trigered. Selling!', +data.kline.close, this.stopLoss)

@@ -67,6 +67,7 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
         if (!data.hasOwnProperty('to')) {
             return
         }
+        data.timestamp = Date.now()
         CACHE = data
         return startTrader(data)
     },
@@ -292,7 +293,7 @@ async function startTrader(data, telegramAction = false) {
         const pair = data.data.sort((a, b) => {
                 return b.prob - a.prob
             })
-            .filter(p => p.prob > 0.99)
+            .filter(p => p.prob > 0.9)
             .filter(p => (regex).test(p.pair))
             .filter(p => p.pair !== bot.lastPair) // don't trade on last pair
         // console.log(pair)
