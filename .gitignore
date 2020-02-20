@@ -9,7 +9,7 @@ npm-debug.log
 config.js
 
 #logs
-/logs/*
+logs/*
 
 #test/debug file
 test.js
