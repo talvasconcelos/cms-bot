@@ -63,8 +63,8 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
     maxAttempts: 10,
     onopen: e => console.log('Connected!'),
     onmessage: e => {
-        const data = JSON.parse(e.data)
-        if (!data.aidata.length) {
+        const data = JSON.parse(e)
+        if (!data.ai || !data.aidata.length) {
             return
         }
         //data.timestamp = Date.now()
