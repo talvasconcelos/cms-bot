@@ -64,10 +64,10 @@ const cmsWS = new Sockette('wss://market-scanner.herokuapp.com', {
     onopen: e => console.log('Connected!'),
     onmessage: e => {
         const data = JSON.parse(e.data)
-        if (!data.hasOwnProperty('to')) {
+        if (!data.aidata.length) {
             return
         }
-        data.timestamp = Date.now()
+        //data.timestamp = Date.now()
         CACHE = data
         return startTrader(data)
     },
@@ -290,10 +290,10 @@ async function startTrader(data, telegramAction = false) {
             console.log(`Bot is trading!`)
             return
         }
-        const pair = data.data.sort((a, b) => {
+        const pair = data.aidata.sort((a, b) => {
                 return b.prob - a.prob
             })
-            .filter(p => p.prob > 0.9)
+            .filter(p => p.exchange === 'binance')
             .filter(p => (regex).test(p.pair))
             .filter(p => p.pair !== bot.lastPair) // don't trade on last pair
         // console.log(pair)
