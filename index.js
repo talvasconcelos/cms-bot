@@ -284,7 +284,7 @@ async function startTrader(data, telegramAction = false) {
         }).catch(console.error)
     }
     if(!bot.isResuming && !data) {return}
-    if (!bot.isResuming && data && data.hasOwnProperty('to') && data.to == 'trader') {
+    if (!bot.isResuming && data && data.aipairs.length) {
         // console.log(data)
         if (bot && bot.is_trading) {
             console.log(`Bot is trading!`)
