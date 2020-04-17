@@ -7,6 +7,7 @@ class Bot extends Trader {
     this.armTarget = null;
     this.trailingStopArmed = false;
     this.stopLoss = 0;
+    this.sellPrice = 0;
   }
 
   async executeStrategy() {
@@ -43,6 +44,7 @@ class Bot extends Trader {
     );
     if (sellPrice > this.stopLoss) {
       this.stopLoss = sellPrice;
+      this.sellPrice = sellPrice;
     }
   }
 
