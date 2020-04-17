@@ -1,0 +1,35 @@
+{
+  "balance": [
+    "0.00157475",
+    "0.00157475",
+    "0.00160305",
+    "0.00160305"
+  ],
+  "trades": [
+    {
+      "timestamp": 1587117679962,
+      "pair": "KMDBTC",
+      "price": 0.0000822,
+      "state": "open"
+    },
+    {
+      "timestamp": 1587131896928,
+      "pair": "KMDBTC",
+      "price": "0.00008390",
+      "state": "closed"
+    },
+    {
+      "timestamp": 1587132287534,
+      "pair": "WTCBTC",
+      "price": "0.00004450",
+      "state": "opened"
+    },
+    {
+      "timestamp": 1587132829603,
+      "pair": "WTCBTC",
+      "price": "0.00004530",
+      "state": "closed"
+    }
+  ],
+  "errors": []
+}
