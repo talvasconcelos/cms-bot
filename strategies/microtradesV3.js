@@ -8,12 +8,21 @@ class Bot extends Trader {
     this.trailingStopArmed = false;
     this.stopLoss = 0;
     this.sellPrice = 0;
+    this.hardStop = null;
   }
 
   async executeStrategy() {
     if (!this.isTrading || this.isBuying) {
       return;
     }
+
+    if (!this.hardStop) {
+      this.hardStop = this.roundToNearest(
+        this.buyPrice / this._SL_p,
+        this.tickSize
+      );
+    }
+
     if (!this.armTarget) {
       this.armTarget = this.roundToNearest(
         this.buyPrice * this._TP_p,
@@ -34,7 +43,7 @@ class Bot extends Trader {
 
   checkTrade() {
     // Check if stop is hit
-    if (this.lastPrice < this.stopLoss) {
+    if (this.lastPrice < this.stopLoss || this.lastPrice < this.hardStop) {
       console.log("Sell price trigered. Selling!");
       this.sell({ type: "LIMIT", price: this.lastPrice });
     }
